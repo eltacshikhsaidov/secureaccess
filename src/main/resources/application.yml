@@ -32,6 +32,19 @@ spring:
 #  level:
 #    org.springframework: info
 #    org.hibernate: debug
+  mail:
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    host: us2.smtp.mailhostbox.com
+    username: info@shortly.tech
+    password: tPQlEhW5
 ## Server configuration
 server:
   port: 8080 #set your port
+
+
