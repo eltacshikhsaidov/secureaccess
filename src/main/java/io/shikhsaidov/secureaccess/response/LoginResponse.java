@@ -5,6 +5,6 @@ import lombok.Data;
 
 @Data
 @Builder
-public class RegisterResponse {
-    private String message;
+public class LoginResponse {
+    private String token;
 }

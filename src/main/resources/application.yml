@@ -1,7 +1,7 @@
 # Spring Boot configuration
 spring:
-  profiles:
-    active: development
+#  profiles:
+#    active: @activatedProperties@
   # Security configuration
 #  security:
 #    user:
@@ -17,7 +17,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -34,17 +34,32 @@ spring:
 #    org.hibernate: debug
   mail:
     protocol: smtp
+    host: sandbox.smtp.mailtrap.io
+    username: 163b4a68900963
+    password: 34390a2dce58ca
+    port: 587
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-    host: us2.smtp.mailhostbox.com
-    username: info@shortly.tech
-    password: tPQlEhW5
+
+#            mail:
+#              protocol: smtp
+#              host: us2.smtp.mailhostbox.com
+#              username: noreply@shortly.tech
+#              password: P*%k)vR2
+#              port: 587
+#              properties:
+#                mail:
+#                  smtp:
+#                    auth: true
+#                    starttls:
+#                      enable: true
 ## Server configuration
 server:
   port: 8080 #set your port
+
 
 

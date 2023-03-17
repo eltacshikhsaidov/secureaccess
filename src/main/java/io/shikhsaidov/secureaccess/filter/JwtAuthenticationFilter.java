@@ -1,6 +1,5 @@
 package io.shikhsaidov.secureaccess.filter;
 
-import io.jsonwebtoken.ExpiredJwtException;
 import io.shikhsaidov.secureaccess.repository.TokenRepository;
 import io.shikhsaidov.secureaccess.service.JwtService;
 import jakarta.servlet.FilterChain;

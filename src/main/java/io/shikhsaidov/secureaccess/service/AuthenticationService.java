@@ -7,4 +7,5 @@ import io.shikhsaidov.secureaccess.response.Response;
 public interface AuthenticationService {
     Response<?> register(RegisterDTO registerDTO);
     Response<?> login(LoginDTO loginDTO);
+    Response<?> confirmToken(String token);
 }

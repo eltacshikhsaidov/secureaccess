@@ -1,4 +1,6 @@
 package io.shikhsaidov.secureaccess.service;
 
-public class EmailService {
+
+public interface EmailService {
+    void sendEmail(String to, String subject, String content);
 }

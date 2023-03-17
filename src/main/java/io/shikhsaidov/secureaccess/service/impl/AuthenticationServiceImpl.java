@@ -2,33 +2,44 @@ package io.shikhsaidov.secureaccess.service.impl;
 
 import io.shikhsaidov.secureaccess.dto.LoginDTO;
 import io.shikhsaidov.secureaccess.dto.RegisterDTO;
+import io.shikhsaidov.secureaccess.entity.ConfirmationToken;
 import io.shikhsaidov.secureaccess.entity.Token;
 import io.shikhsaidov.secureaccess.entity.User;
 import io.shikhsaidov.secureaccess.entity.role.Role;
 import io.shikhsaidov.secureaccess.entity.tokentype.TokenType;
+import io.shikhsaidov.secureaccess.exception.TokenNotFound;
+import io.shikhsaidov.secureaccess.repository.ConfirmationTokenRepository;
 import io.shikhsaidov.secureaccess.repository.TokenRepository;
 import io.shikhsaidov.secureaccess.repository.UserRepository;
+import io.shikhsaidov.secureaccess.response.LoginResponse;
 import io.shikhsaidov.secureaccess.response.RegisterResponse;
 import io.shikhsaidov.secureaccess.response.Response;
 import io.shikhsaidov.secureaccess.service.AuthenticationService;
+import io.shikhsaidov.secureaccess.service.EmailService;
 import io.shikhsaidov.secureaccess.service.JwtService;
 import io.shikhsaidov.secureaccess.util.EmailUtil;
 import io.shikhsaidov.secureaccess.util.validator.EmailValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import static io.shikhsaidov.secureaccess.response.Response.failed;
-import static io.shikhsaidov.secureaccess.response.Response.response;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static io.shikhsaidov.secureaccess.response.Response.*;
 import static io.shikhsaidov.secureaccess.response.ResponseCodes.*;
 import static io.shikhsaidov.secureaccess.util.Utility.isNull;
+import static java.util.Objects.nonNull;
 
 @Log4j2
 @Service
 @RequiredArgsConstructor
+@PropertySource("classpath:config.properties")
 public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final UserRepository repository;
@@ -37,6 +48,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailValidator emailValidator;
+
+    private final EmailUtil emailUtil;
+
+    private final EmailService emailService;
+
+    private final ConfirmationTokenRepository confirmationTokenRepository;
+
+    @Value("${url}")
+    public String url;
 
     @Override
     public Response<?> register(RegisterDTO request) {
@@ -65,19 +85,49 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(EMAIL_IS_TAKEN, "email is taken", null);
         }
 
-        var user = User.builder()
-                .firstname(request.firstName())
-                .lastname(request.lastName())
-                .email(request.email())
-                .password(passwordEncoder.encode(request.password()))
-                .role(Role.USER)
-                .build();
+        var user = new User(
+                request.firstName(),
+                request.lastName(),
+                request.email(),
+                passwordEncoder.encode(request.password()),
+                Role.USER
+        );
+
         var savedUser = repository.save(user);
-        var jwtToken = jwtService.generateToken(user);
-        saveUserToken(savedUser, jwtToken);
+
+        // creating confirmation token
+        String token = UUID.randomUUID().toString();
+
+        ConfirmationToken confirmationToken = ConfirmationToken.builder()
+                .token(token)
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .user(savedUser)
+                .build();
+
+        confirmationTokenRepository.save(confirmationToken);
+
+        // send mail
+        try {
+            emailService.sendEmail(
+                    email,
+                    "Confirm Email",
+                    emailUtil.confirmationTemplate(
+                            firstName,
+                            url + "v1/auth/confirm?token=".concat(token)
+                    )
+            );
+        } catch (Exception e) {
+            log.warn("Sending email failed, but user registered successfully," +
+                    " exception message: {}", e.getMessage());
+        }
 
         log.info("user successfully registered!");
-        return Response.success("success", RegisterResponse.builder().token(jwtToken).build());
+        return Response.success(
+                "success",
+                RegisterResponse.builder()
+                        .message("confirmation link sent to your email address")
+                        .build()
+        );
     }
 
     @Override
@@ -104,6 +154,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return failed(USER_IS_NOT_REGISTERED, "user is not registered yet");
         }
 
+        if (!checkUserInDB.get().isEnabled()) {
+            log.warn("User did not confirmed email address");
+            return failed(EMAIL_IS_NOT_CONFIRMED, "email is not confirmed");
+        }
+
+        if (!checkUserInDB.get().isAccountNonLocked()) {
+            log.warn("User is locked by admin");
+            return failed(USER_IS_LOCKED_BY_ADMIN, "user is locked by admin");
+        }
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.email(),
@@ -117,7 +177,37 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         saveUserToken(user, jwtToken);
 
         log.info("user successfully logged in");
-        return Response.success("success", RegisterResponse.builder().token(jwtToken).build());
+        return Response.success("success", LoginResponse.builder().token(jwtToken).build());
+    }
+
+    @Override
+    public Response<?> confirmToken(String token) {
+        ConfirmationToken confirmationToken = confirmationTokenRepository
+                .findByToken(token)
+                .orElseThrow(
+                        () -> new TokenNotFound("token not found")
+                );
+
+        if (nonNull(confirmationToken.getConfirmedAt())) {
+            log.warn("Email is already confirmed");
+            return failed(EMAIL_IS_ALREADY_CONFIRMED, "email is already confirmed");
+        }
+
+        LocalDateTime expiresAt = confirmationToken.getExpiresAt();
+        if (expiresAt.isBefore(LocalDateTime.now())) {
+            log.warn("Confirmation token expired");
+            return failed(CONFIRMATION_TOKEN_EXPIRED, "confirmation token expired");
+        }
+
+        confirmationTokenRepository.updateConfirmedAt(token, LocalDateTime.now());
+        repository.enableUser(confirmationToken.getUser().getEmail());
+
+        return success(
+                "success",
+                RegisterResponse.builder()
+                        .message("token confirmed successfully")
+                        .build()
+        );
     }
 
     private void saveUserToken(User user, String jwtToken) {

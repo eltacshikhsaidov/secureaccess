@@ -15,12 +15,9 @@ import java.util.List;
 @Getter
 @Setter
 @ToString
-@RequiredArgsConstructor
-@Builder
-//@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "_user")
+@NoArgsConstructor
 public class User implements UserDetails {
 
     @Id
@@ -30,6 +27,9 @@ public class User implements UserDetails {
     private String lastname;
     private String email;
     private String password;
+
+    private Boolean locked = false;
+    private Boolean enabled = false;
     @CreationTimestamp
     private LocalDateTime registeredAt;
 
@@ -62,7 +62,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !locked;
     }
 
     @Override
@@ -72,6 +72,14 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
+    }
+
+    public User(String firstname, String lastname, String email, String password, Role role) {
+        this.email = email;
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.password = password;
+        this.role = role;
     }
 }
