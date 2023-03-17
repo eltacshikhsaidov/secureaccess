@@ -1,4 +1,4 @@
-package io.shikhsaidov.secureaccess.response;
+package io.shikhsaidov.secureaccess.response.model;
 
 import lombok.Builder;
 import lombok.Data;

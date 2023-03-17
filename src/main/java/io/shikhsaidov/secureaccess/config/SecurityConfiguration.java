@@ -27,7 +27,8 @@ public class SecurityConfiguration {
     private static final String[] PERMIT_ALL = {
             "/v1/auth/**",
             "/v1/auth/confirm**",
-            "/error"
+            "/error",
+            "/v1/test/public"
     };
 
     @Bean

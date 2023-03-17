@@ -10,6 +10,7 @@ import static io.shikhsaidov.secureaccess.response.ResponseCodes.*;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Response<T> {
 
     private Integer code;
@@ -24,7 +25,6 @@ public class Response<T> {
         );
     }
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static Response<?> failed(Integer code, String msg) {
         return new Response<>(
                 code,
@@ -33,7 +33,6 @@ public class Response<T> {
         );
     }
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static <T> Response<?> response(Integer code, String msg, T data) {
         return new Response<>(
                 code,

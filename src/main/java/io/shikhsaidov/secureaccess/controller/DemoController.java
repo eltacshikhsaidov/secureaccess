@@ -10,15 +10,20 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/v1/test")
-@PreAuthorize("hasAuthority('ADMIN')")
 public class DemoController {
 
 
     @GetMapping(path = "/t")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<String> sayHello() {
         Authentication a = SecurityContextHolder.getContext().getAuthentication();
         System.out.println(a.getAuthorities());
         return ResponseEntity.ok("Hello from secured endpoint");
+    }
+
+    @GetMapping(path = "/public")
+    public String publicEndpoint() {
+        return "public endpoint";
     }
 
 }
