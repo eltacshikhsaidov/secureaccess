@@ -16,6 +16,7 @@ import java.io.IOException;
 
 import static io.shikhsaidov.secureaccess.response.Response.response;
 import static io.shikhsaidov.secureaccess.response.ResponseCodes.SUCCESS;
+import static io.shikhsaidov.secureaccess.response.ResponseCodes.TOKEN_IS_INVALID_OR_EXPIRED;
 import static io.shikhsaidov.secureaccess.util.Utility.object2Json;
 
 @Log4j2
@@ -34,6 +35,22 @@ public class LogoutService implements LogoutHandler {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         if (authHeader == null ||!authHeader.startsWith("Bearer ")) {
+            log.info("Token is invalid");
+
+            String invalidTokenJsonResponse = object2Json(
+                    response(
+                            TOKEN_IS_INVALID_OR_EXPIRED,
+                            "Token is invalid or expired",
+                            null
+                    )
+            );
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            try {
+                response.getWriter().write(invalidTokenJsonResponse);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             return;
         }
         jwt = authHeader.substring(7);
