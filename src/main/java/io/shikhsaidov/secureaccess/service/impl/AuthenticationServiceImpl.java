@@ -5,10 +5,7 @@ import io.shikhsaidov.secureaccess.dto.LoginDTO;
 import io.shikhsaidov.secureaccess.dto.RegisterDTO;
 import io.shikhsaidov.secureaccess.dto.ResetPasswordDTO;
 import io.shikhsaidov.secureaccess.entity.*;
-import io.shikhsaidov.secureaccess.enums.EmailStatus;
-import io.shikhsaidov.secureaccess.enums.EmailType;
-import io.shikhsaidov.secureaccess.enums.Role;
-import io.shikhsaidov.secureaccess.enums.TokenType;
+import io.shikhsaidov.secureaccess.enums.*;
 import io.shikhsaidov.secureaccess.exception.TokenNotFound;
 import io.shikhsaidov.secureaccess.repository.*;
 import io.shikhsaidov.secureaccess.response.model.ForgotPasswordResponse;
@@ -29,6 +26,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,13 +48,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailValidator emailValidator;
-
     private final EmailUtil emailUtil;
-
     private final EmailService emailService;
-
     private final ConfirmationTokenRepository confirmationTokenRepository;
-
     private final EmailInfoRepository emailInfoRepository;
     private final ResetPasswordTokenRepository resetPasswordTokenRepository;
 
@@ -238,6 +232,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             );
         }
 
+        if (emailValidator.validate(email)) {
+            log.warn("Email format is incorrect");
+            return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
+        }
+
         Optional<User> user = userRepository.findByEmail(email);
 
         if (user.isEmpty()) {
@@ -264,11 +263,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             );
         }
 
+        String token = generateResetToken();
+
         var resetPasswordToken = ResetPasswordToken.builder()
-                .token(generateResetToken())
+                .token(token)
                 .expiresAt(LocalDateTime.now().plusMinutes(1))
                 .user(user.get())
+                .status(Status.ACTIVE)
                 .build();
+
+        int countDisabledTokens = disableAllActiveResetTokens(user.get());
+
+        if (countDisabledTokens >= 3) {
+            log.warn("You exceeded the daily limit number of forgot email sending");
+            return failed(
+                    DAILY_EMAIL_LIMIT_EXCEEDED,
+                    "Daily email sending limit exceeded for forgot email option"
+            );
+        }
 
         resetPasswordTokenRepository.save(resetPasswordToken);
 
@@ -334,5 +346,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private String generateResetToken() {
         return UUID.randomUUID().toString();
+    }
+
+    public int disableAllActiveResetTokens(User user) {
+        resetPasswordTokenRepository.updateAllByStatusAndUser(Status.INACTIVE, user);
+
+        LocalDateTime localDateTime = LocalDateTime.now();
+        LocalDateTime startedAt = localDateTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime endsAt = localDateTime.withHour(23).withMinute(59).withSecond(59).withNano(9999999);
+        return resetPasswordTokenRepository.countByStatusAndCreatedAtBetween(Status.INACTIVE, startedAt, endsAt);
     }
 }

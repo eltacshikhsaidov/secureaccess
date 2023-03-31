@@ -14,4 +14,5 @@ public class ResponseCodes {
     public static final Integer USER_IS_LOCKED_BY_ADMIN = 11;
     public static final Integer NO_ENVIRONMENT_IS_PRESENT = 12;
     public static final Integer EMAIL_SENT_WITH_PASSWORD_RESET = 13;
+    public static final Integer DAILY_EMAIL_LIMIT_EXCEEDED = 13;
 }

@@ -27,7 +27,6 @@ public class AuthenticationController {
     public Response<?> confirmToken(@RequestParam(name = "token") String token) {
         return service.confirmToken(token);
     }
-
     @PostMapping(path = "/forgot-password")
     public Response<?> forgotPassword(@RequestBody ForgotPasswordDTO request) {
         return service.forgotPassword(request);
