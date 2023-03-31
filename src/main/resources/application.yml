@@ -1,70 +1,9 @@
 # Spring Boot configuration
 spring:
-  #  profiles:
-  #    active: @activatedProperties@
-  # Security configuration
-  #  security:
-  #    user:
-  #      name: user
-  #      password: user
-  # Database
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://testdb-do-user-11229998-0.b.db.ondigitalocean.com:25060/defaultdb
-    username: doadmin
-    password: AVNS_UDrf2NAddzADTYS6AUp
-  # JPA properties
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-    database: postgresql
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-  #    open-in-view: false
-  #    generate-ddl: true
-  # Logger configuration
-  #logging:
-  #  pattern:
-  #    console: "%d %-5level %logger : %msg%n"
-  #  level:
-  #    org.springframework: info
-  #    org.hibernate: debug
-  mail:
-    protocol: smtp
-    host: sandbox.smtp.mailtrap.io
-    username: 163b4a68900963
-    password: 34390a2dce58ca
-    port: 587
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-
-#            mail:
-#              protocol: smtp
-#              host: us2.smtp.mailhostbox.com
-#              username: noreply@shortly.tech
-#              password: P*%k)vR2
-#              port: 587
-#              properties:
-#                mail:
-#                  smtp:
-#                    auth: true
-#                    starttls:
-#                      enable: true
-### Server configuration test
-#server:
-#  port: 8080 #set your port
-
-  ## Server configuration prod
-server:
-  port: 8082 #set your port
-  address: api.shortly.tech
+    profiles:
+      active: @environment@
+    config:
+      name: config,application
 
 
 
