@@ -1,5 +1,6 @@
 package io.shikhsaidov.secureaccess.controller;
 
+import io.shikhsaidov.secureaccess.dto.ForgotPasswordDTO;
 import io.shikhsaidov.secureaccess.dto.LoginDTO;
 import io.shikhsaidov.secureaccess.dto.RegisterDTO;
 import io.shikhsaidov.secureaccess.response.Response;
@@ -22,10 +23,14 @@ public class AuthenticationController {
     public Response<?> login(@RequestBody LoginDTO request) {
         return service.login(request);
     }
-
     @GetMapping(path = "/confirm")
     public Response<?> confirmToken(@RequestParam(name = "token") String token) {
         return service.confirmToken(token);
+    }
+
+    @PostMapping(path = "/forgot-password")
+    public Response<?> forgotPassword(@RequestBody ForgotPasswordDTO request) {
+        return service.forgotPassword(request);
     }
 
 }

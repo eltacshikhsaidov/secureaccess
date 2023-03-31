@@ -13,9 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasAuthority('ADMIN')")
 @RequiredArgsConstructor
 public class AdminController {
-
     private final AdminService adminService;
-
     @GetMapping(path = "/application/environment")
     public Response<?> getEnvironment() {
         return adminService.getEnvironment();

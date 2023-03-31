@@ -1,20 +1,17 @@
 package io.shikhsaidov.secureaccess.service.impl;
 
+import io.shikhsaidov.secureaccess.dto.ForgotPasswordDTO;
 import io.shikhsaidov.secureaccess.dto.LoginDTO;
 import io.shikhsaidov.secureaccess.dto.RegisterDTO;
-import io.shikhsaidov.secureaccess.entity.ConfirmationToken;
-import io.shikhsaidov.secureaccess.entity.EmailInfo;
-import io.shikhsaidov.secureaccess.entity.Token;
-import io.shikhsaidov.secureaccess.entity.User;
+import io.shikhsaidov.secureaccess.dto.ResetPasswordDTO;
+import io.shikhsaidov.secureaccess.entity.*;
 import io.shikhsaidov.secureaccess.enums.EmailStatus;
 import io.shikhsaidov.secureaccess.enums.EmailType;
 import io.shikhsaidov.secureaccess.enums.Role;
 import io.shikhsaidov.secureaccess.enums.TokenType;
 import io.shikhsaidov.secureaccess.exception.TokenNotFound;
-import io.shikhsaidov.secureaccess.repository.ConfirmationTokenRepository;
-import io.shikhsaidov.secureaccess.repository.EmailInfoRepository;
-import io.shikhsaidov.secureaccess.repository.TokenRepository;
-import io.shikhsaidov.secureaccess.repository.UserRepository;
+import io.shikhsaidov.secureaccess.repository.*;
+import io.shikhsaidov.secureaccess.response.model.ForgotPasswordResponse;
 import io.shikhsaidov.secureaccess.response.model.LoginResponse;
 import io.shikhsaidov.secureaccess.response.model.RegisterResponse;
 import io.shikhsaidov.secureaccess.response.Response;
@@ -33,6 +30,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import static io.shikhsaidov.secureaccess.response.Response.*;
@@ -46,7 +44,7 @@ import static java.util.Objects.nonNull;
 @PropertySource("classpath:config-${application.environment}.properties")
 public class AuthenticationServiceImpl implements AuthenticationService {
 
-    private final UserRepository repository;
+    private final UserRepository userRepository;
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -60,6 +58,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final ConfirmationTokenRepository confirmationTokenRepository;
 
     private final EmailInfoRepository emailInfoRepository;
+    private final ResetPasswordTokenRepository resetPasswordTokenRepository;
 
     @Value("${url}")
     public String url;
@@ -84,7 +83,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         // check if user is exists
-        var checkUserInDB = repository.findByEmail(request.email());
+        var checkUserInDB = userRepository.findByEmail(request.email());
 
         if (checkUserInDB.isPresent()) {
             log.warn("Email is already taken");
@@ -99,7 +98,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 Role.USER
         );
 
-        var savedUser = repository.save(user);
+        var savedUser = userRepository.save(user);
 
         // creating confirmation token
         String token = UUID.randomUUID().toString();
@@ -165,7 +164,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
         }
 
-        var checkUserInDB = repository.findByEmail(email);
+        var checkUserInDB = userRepository.findByEmail(email);
         if (checkUserInDB.isEmpty()) {
             log.warn("User is not registered yet");
             return failed(USER_IS_NOT_REGISTERED, "user is not registered yet");
@@ -187,7 +186,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         request.password()
                 )
         );
-        var user = repository.findByEmail(request.email())
+        var user = userRepository.findByEmail(request.email())
                 .orElseThrow();
         var jwtToken = jwtService.generateToken(user);
         revokeAllUserTokens(user);
@@ -217,7 +216,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         confirmationTokenRepository.updateConfirmedAt(token, LocalDateTime.now());
-        repository.enableUser(confirmationToken.getUser().getEmail());
+        userRepository.enableUser(confirmationToken.getUser().getEmail());
 
         return success(
                 "success",
@@ -225,6 +224,90 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         .message("token confirmed successfully")
                         .build()
         );
+    }
+
+    @Override
+    public Response<?> forgotPassword(ForgotPasswordDTO forgotPasswordDTO) {
+        String email = forgotPasswordDTO.email();
+
+        if (isNull(email)) {
+            log.warn("Please provide email for resetting your password");
+            return failed(
+                    INVALID_REQUEST_DATA,
+                    "Provide an email for resetting your password"
+            );
+        }
+
+        Optional<User> user = userRepository.findByEmail(email);
+
+        if (user.isEmpty()) {
+            log.warn("User with email: {} does not exist", email);
+            return failed(
+                    EMAIL_SENT_WITH_PASSWORD_RESET,
+                    "we will send reset link to your email if it is exist"
+            );
+        }
+
+        if (!user.get().isEnabled()) {
+            log.warn("User did not confirmed an email yet");
+            return failed(
+                    EMAIL_IS_NOT_CONFIRMED,
+                    "Email is not confirmed yet"
+            );
+        }
+
+        if (!user.get().isAccountNonLocked()) {
+            log.warn("This user is blocked by admin");
+            return failed(
+                    USER_IS_LOCKED_BY_ADMIN,
+                    "User is locked by admin"
+            );
+        }
+
+        var resetPasswordToken = ResetPasswordToken.builder()
+                .token(generateResetToken())
+                .expiresAt(LocalDateTime.now().plusMinutes(1))
+                .user(user.get())
+                .build();
+
+        resetPasswordTokenRepository.save(resetPasswordToken);
+
+        var emailInfo = EmailInfo.builder()
+                .emailTo(user.get().getEmail())
+                .type(EmailType.RESET_PASSWORD)
+                .user(user.get())
+                .subject("Reset password")
+                .content(
+                        emailUtil.resetPasswordTemplate(
+                        user.get().getFirstname(),
+                        "reset link"
+                    ).getBytes()
+                )
+                .build();
+
+        try {
+            log.info("Trying to send an reset email");
+            emailService.sendEmail(emailInfo);
+            emailInfo.setStatus(EmailStatus.SENT);
+
+        } catch (Exception e) {
+            log.warn("Exception occurred while sending an email");
+            emailInfo.setStatus(EmailStatus.RETRY);
+        } finally {
+            emailInfoRepository.save(emailInfo);
+        }
+
+        return success(
+                "success",
+                ForgotPasswordResponse.builder()
+                        .message("Reset instructions sent to your email address")
+                        .build()
+        );
+    }
+
+    @Override
+    public Response<?> resetPassword(ResetPasswordDTO resetPasswordDTO) {
+        return null;
     }
 
     private void saveUserToken(User user, String jwtToken) {
@@ -247,5 +330,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             token.setRevoked(true);
         });
         tokenRepository.saveAll(validUserTokens);
+    }
+
+    private String generateResetToken() {
+        return UUID.randomUUID().toString();
     }
 }

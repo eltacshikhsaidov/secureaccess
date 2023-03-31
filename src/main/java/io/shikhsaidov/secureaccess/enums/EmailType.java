@@ -1,5 +1,5 @@
 package io.shikhsaidov.secureaccess.enums;
 
 public enum EmailType {
-    CONFIRMATION, INFO
+    CONFIRMATION, INFO, RESET_PASSWORD
 }
