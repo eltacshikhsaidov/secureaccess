@@ -1,0 +1,10 @@
+${AnsiColor.GREEN} ,---. ,------. ,-----.,--. ,--.,------. ,------.   ,---.   ,-----. ,-----.,------. ,---.   ,---.
+${AnsiColor.GREEN}'   .-'|  .---''  .--./|  | |  ||  .--. '|  .---'  /  O  \ '  .--./'  .--./|  .---''   .-' '   .-'
+${AnsiColor.GREEN}`.  `-.|  `--, |  |    |  | |  ||  '--'.'|  `--,  |  .-.  ||  |    |  |    |  `--, `.  `-. `.  `-.
+${AnsiColor.GREEN}.-'    |  `---.'  '--'\'  '-'  '|  |\  \ |  `---. |  | |  |'  '--'\'  '--'\|  `---..-'    |.-'    |
+${AnsiColor.GREEN}`-----'`------' `-----' `-----' `--' '--'`------' `--' `--' `-----' `-----'`------'`-----' `-----'
+${AnsiColor.DEFAULT}
+application name: ${AnsiColor.YELLOW}${spring.application.name}${AnsiColor.DEFAULT}
+environment: ${AnsiColor.YELLOW}${application.environment}${AnsiColor.DEFAULT}
+Powered by Spring Boot ${AnsiColor.YELLOW}${spring-boot.version}${AnsiColor.DEFAULT}
+${AnsiColor.DEFAULT}
