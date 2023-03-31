@@ -39,7 +39,7 @@ import static java.util.Objects.nonNull;
 @Log4j2
 @Service
 @RequiredArgsConstructor
-@PropertySource("classpath:config.properties")
+@PropertySource("classpath:config-${application.environment}.properties")
 public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final UserRepository repository;
