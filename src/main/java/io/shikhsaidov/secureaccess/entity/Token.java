@@ -1,6 +1,6 @@
 package io.shikhsaidov.secureaccess.entity;
 
-import io.shikhsaidov.secureaccess.entity.tokentype.TokenType;
+import io.shikhsaidov.secureaccess.enums.TokenType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

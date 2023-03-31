@@ -1,6 +1,6 @@
 package io.shikhsaidov.secureaccess.entity;
 
-import io.shikhsaidov.secureaccess.entity.role.Role;
+import io.shikhsaidov.secureaccess.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

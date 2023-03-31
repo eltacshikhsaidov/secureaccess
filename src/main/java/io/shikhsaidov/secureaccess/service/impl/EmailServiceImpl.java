@@ -1,5 +1,6 @@
 package io.shikhsaidov.secureaccess.service.impl;
 
+import io.shikhsaidov.secureaccess.entity.EmailInfo;
 import io.shikhsaidov.secureaccess.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -25,15 +26,15 @@ public class EmailServiceImpl implements EmailService {
 
     @Async
     @Override
-    public void sendEmail(String to, String subject, String content) {
+    public void sendEmail(EmailInfo emailInfo) {
         try {
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper messageHelper = new MimeMessageHelper(message, "UTF-8");
-            messageHelper.setText(content, true);
-            messageHelper.setTo(to);
+            messageHelper.setText(new String(emailInfo.content), true);
+            messageHelper.setTo(emailInfo.emailTo);
             messageHelper.setFrom(sender);
-            messageHelper.setSubject(subject);
+            messageHelper.setSubject(emailInfo.subject);
 
             mailSender.send(message);
         } catch (MessagingException e) {

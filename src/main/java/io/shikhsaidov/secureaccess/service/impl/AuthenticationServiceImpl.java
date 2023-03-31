@@ -3,12 +3,16 @@ package io.shikhsaidov.secureaccess.service.impl;
 import io.shikhsaidov.secureaccess.dto.LoginDTO;
 import io.shikhsaidov.secureaccess.dto.RegisterDTO;
 import io.shikhsaidov.secureaccess.entity.ConfirmationToken;
+import io.shikhsaidov.secureaccess.entity.EmailInfo;
 import io.shikhsaidov.secureaccess.entity.Token;
 import io.shikhsaidov.secureaccess.entity.User;
-import io.shikhsaidov.secureaccess.entity.role.Role;
-import io.shikhsaidov.secureaccess.entity.tokentype.TokenType;
+import io.shikhsaidov.secureaccess.enums.EmailStatus;
+import io.shikhsaidov.secureaccess.enums.EmailType;
+import io.shikhsaidov.secureaccess.enums.Role;
+import io.shikhsaidov.secureaccess.enums.TokenType;
 import io.shikhsaidov.secureaccess.exception.TokenNotFound;
 import io.shikhsaidov.secureaccess.repository.ConfirmationTokenRepository;
+import io.shikhsaidov.secureaccess.repository.EmailInfoRepository;
 import io.shikhsaidov.secureaccess.repository.TokenRepository;
 import io.shikhsaidov.secureaccess.repository.UserRepository;
 import io.shikhsaidov.secureaccess.response.model.LoginResponse;
@@ -54,6 +58,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final EmailService emailService;
 
     private final ConfirmationTokenRepository confirmationTokenRepository;
+
+    private final EmailInfoRepository emailInfoRepository;
 
     @Value("${url}")
     public String url;
@@ -106,20 +112,31 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         confirmationTokenRepository.save(confirmationToken);
 
+        var emailInfo = EmailInfo.builder()
+                .emailTo(email)
+                .subject("Confirm Email")
+                .content(
+                        emailUtil.confirmationTemplate(
+                                firstName,
+                                url + "v1/auth/confirm?token=".concat(token)
+                        ).getBytes()
+                )
+                .type(EmailType.CONFIRMATION)
+                .user(user)
+                .build();
+
         // send mail
         try {
-            emailService.sendEmail(
-                    email,
-                    "Confirm Email",
-                    emailUtil.confirmationTemplate(
-                            firstName,
-                            url + "v1/auth/confirm?token=".concat(token)
-                    )
-            );
+            emailService.sendEmail(emailInfo);
+
+            emailInfo.setStatus(EmailStatus.SENT);
         } catch (Exception e) {
             log.warn("Sending email failed, but user registered successfully," +
                     " exception message: {}", e.getMessage());
+            emailInfo.setStatus(EmailStatus.RETRY);
         }
+
+        emailInfoRepository.save(emailInfo);
 
         log.info("user successfully registered!");
         return Response.success(
