@@ -26,8 +26,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,6 +56,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Value("${url}")
     public String url;
+
+    @Value("${reset.password.token.regex.regexp}")
+    public String RESET_PASSWORD_TOKEN_REGEX;
 
     @Override
     public Response<?> register(RegisterDTO request) {
@@ -292,7 +295,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .content(
                         emailUtil.resetPasswordTemplate(
                         user.get().getFirstname(),
-                        "reset link"
+                        token
                     ).getBytes()
                 )
                 .build();
@@ -319,7 +322,88 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public Response<?> resetPassword(ResetPasswordDTO resetPasswordDTO) {
-        return null;
+        log.info("Calling resetPassword function with parameters");
+
+        String password = resetPasswordDTO.newPassword();
+        String confirmPassword = resetPasswordDTO.confirmNewPassword();
+        String token = resetPasswordDTO.token();
+
+        if (isNull(password, confirmPassword, token)) {
+            log.warn("Invalid request data");
+            return failed(
+                    INVALID_REQUEST_DATA,
+                    "Invalid request data"
+            );
+        }
+
+        if (!token.matches(RESET_PASSWORD_TOKEN_REGEX)) {
+            log.warn("Reset password token is invalid");
+            return failed(
+                    INVALID_TOKEN,
+                    "reset password token is invalid"
+            );
+        }
+
+        ResetPasswordToken resetPasswordToken =
+                resetPasswordTokenRepository.findResetPasswordTokenByToken(token).orElse(null);
+
+        if (Objects.isNull(resetPasswordToken)) {
+            log.warn("Reset password token not found");
+            return failed(
+                    NOT_FOUND,
+                    "Reset password token not found"
+            );
+        }
+
+        if (resetPasswordToken.status.equals(Status.INACTIVE)) {
+            log.warn("Token is disabled");
+            return failed(
+                    TOKEN_DISABLED,
+                    "Reset password token is disabled"
+            );
+        }
+
+        LocalDateTime currentTime = LocalDateTime.now();
+        if (currentTime.isAfter(resetPasswordToken.expiresAt)) {
+            log.warn("Reset password token is expired");
+            return failed(
+                    TOKEN_EXPIRED,
+                    "Reset password token is expired"
+            );
+        }
+
+        User user = resetPasswordTokenRepository.getUserByActiveToken(token).orElse(null);
+
+        if (Objects.isNull(user)) {
+            log.warn("User is not found");
+            return failed(
+                    NOT_FOUND,
+                    "User is not found"
+            );
+        }
+
+        if (!password.equals(confirmPassword)) {
+            log.warn("Passwords did not match");
+            return failed(
+                    PASSWORDS_DID_NOT_MATCH,
+                    "Passwords did not match"
+            );
+        }
+
+        try {
+            log.info("Updating user data");
+            userRepository.updatePasswordByUserId(user.getId(), passwordEncoder.encode(password));
+            resetPasswordTokenRepository.updateAllByStatusAndUser(Status.INACTIVE, user);
+        } catch (Exception e) {
+            log.warn("Exception occurred while updating user, message: {}", e.getMessage());
+            return failed(
+                    EXCEPTION_OCCURRED,
+                    "Exception occurred while updating user"
+            );
+        }
+
+
+        return success("success", null);
     }
 
     private void saveUserToken(User user, String jwtToken) {

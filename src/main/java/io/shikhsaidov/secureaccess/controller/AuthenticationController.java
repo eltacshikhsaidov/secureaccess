@@ -3,6 +3,7 @@ package io.shikhsaidov.secureaccess.controller;
 import io.shikhsaidov.secureaccess.dto.ForgotPasswordDTO;
 import io.shikhsaidov.secureaccess.dto.LoginDTO;
 import io.shikhsaidov.secureaccess.dto.RegisterDTO;
+import io.shikhsaidov.secureaccess.dto.ResetPasswordDTO;
 import io.shikhsaidov.secureaccess.response.Response;
 import io.shikhsaidov.secureaccess.service.AuthenticationService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,10 @@ public class AuthenticationController {
     @PostMapping(path = "/forgot-password")
     public Response<?> forgotPassword(@RequestBody ForgotPasswordDTO request) {
         return service.forgotPassword(request);
+    }
+    @PostMapping(path = "/reset-password")
+    public Response<?> resetPassword(@RequestBody ResetPasswordDTO request) {
+        return service.resetPassword(request);
     }
 
 }

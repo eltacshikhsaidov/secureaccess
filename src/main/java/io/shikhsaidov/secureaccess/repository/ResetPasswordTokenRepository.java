@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Repository
 public interface ResetPasswordTokenRepository extends JpaRepository<ResetPasswordToken, Long> {
@@ -20,4 +21,9 @@ public interface ResetPasswordTokenRepository extends JpaRepository<ResetPasswor
     void updateAllByStatusAndUser(Status status, User user);
 
     int countByStatusAndCreatedAtBetween(Status status, LocalDateTime startedAt, LocalDateTime endsAt);
+
+    @Query("select r.user from ResetPasswordToken r where r.token=?1 and r.status='ACTIVE'")
+    Optional<User> getUserByActiveToken(String token);
+
+    Optional<ResetPasswordToken> findResetPasswordTokenByToken(String token);
 }
