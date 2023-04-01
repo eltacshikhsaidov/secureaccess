@@ -64,5 +64,11 @@ server:
 application:
   environment: dev
 
+#  logging configuration
+logging:
+  file:
+    name: secureaccess.log
+    path: .
+
 
 

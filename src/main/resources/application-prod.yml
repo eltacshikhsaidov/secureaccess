@@ -64,5 +64,10 @@ server:
 application:
   environment: prod
 
+#  logging configuration
+logging:
+  file:
+    name: secureaccess.log
+    path: .
 
 
