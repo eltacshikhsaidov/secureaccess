@@ -16,6 +16,7 @@ import io.shikhsaidov.secureaccess.service.AuthenticationService;
 import io.shikhsaidov.secureaccess.service.EmailService;
 import io.shikhsaidov.secureaccess.service.JwtService;
 import io.shikhsaidov.secureaccess.util.EmailUtil;
+import io.shikhsaidov.secureaccess.util.LogDetail;
 import io.shikhsaidov.secureaccess.util.validator.EmailValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -46,6 +47,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LogDetail logDetail;
     private final AuthenticationManager authenticationManager;
     private final EmailValidator emailValidator;
     private final EmailUtil emailUtil;
@@ -63,19 +65,31 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public Response<?> register(RegisterDTO request) {
 
-        log.info("function calling with request");
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function calling with request",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
         String email = request.email();
         String password = request.password();
         String firstName = request.firstName();
         String lastName = request.lastName();
 
         if (isNull(email, password, firstName, lastName)) {
-            log.warn("Invalid request data");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: invalid request data",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(INVALID_REQUEST_DATA, "invalid request data");
         }
 
         if (emailValidator.validate(email)) {
-            log.warn("Email format is incorrect");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email format is incorrect",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
         }
 
@@ -83,7 +97,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var checkUserInDB = userRepository.findByEmail(request.email());
 
         if (checkUserInDB.isPresent()) {
-            log.warn("Email is already taken");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email is taken",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return response(EMAIL_IS_TAKEN, "email is taken", null);
         }
 
@@ -123,8 +141,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         // send mail
         try {
+            log.info("Sending email to user");
             emailService.sendEmail(emailInfo);
-
             emailInfo.setStatus(EmailStatus.SENT);
         } catch (Exception e) {
             log.warn("Sending email failed, but user registered successfully," +
@@ -134,7 +152,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         emailInfoRepository.save(emailInfo);
 
-        log.info("user successfully registered!");
+        log.warn(
+                "requestPath: '{}', clientIp: '{}', function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
         return Response.success(
                 "success",
                 RegisterResponse.builder()
@@ -146,34 +168,58 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public Response<?> login(LoginDTO request) {
 
-        log.info("function calling with request parameters");
+        log.warn(
+                "requestPath: '{}', clientIp: '{}', function calling with request",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
 
         String email = request.email();
         String password = request.password();
 
         if (isNull(email, password)) {
-            log.warn("invalid request data");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: invalid request data",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(INVALID_REQUEST_DATA, "invalid request data");
         }
 
         if (emailValidator.validate(email)) {
-            log.warn("Email format is incorrect");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email format is incorrect",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
         }
 
         var checkUserInDB = userRepository.findByEmail(email);
         if (checkUserInDB.isEmpty()) {
-            log.warn("User is not registered yet");
-            return failed(USER_IS_NOT_REGISTERED, "user is not registered yet");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: user is not registered",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return failed(USER_IS_NOT_REGISTERED, "user is not registered");
         }
 
         if (!checkUserInDB.get().isEnabled()) {
-            log.warn("User did not confirmed email address");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email is not confirmed",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(EMAIL_IS_NOT_CONFIRMED, "email is not confirmed");
         }
 
         if (!checkUserInDB.get().isAccountNonLocked()) {
-            log.warn("User is locked by admin");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: user is locked by admin",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(USER_IS_LOCKED_BY_ADMIN, "user is locked by admin");
         }
 
@@ -189,7 +235,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         revokeAllUserTokens(user);
         saveUserToken(user, jwtToken);
 
-        log.info("user successfully logged in");
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
         return Response.success("success", LoginResponse.builder().token(jwtToken).build());
     }
 
@@ -202,19 +252,32 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 );
 
         if (nonNull(confirmationToken.getConfirmedAt())) {
-            log.warn("Email is already confirmed");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email is already confirmed",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(EMAIL_IS_ALREADY_CONFIRMED, "email is already confirmed");
         }
 
         LocalDateTime expiresAt = confirmationToken.getExpiresAt();
         if (expiresAt.isBefore(LocalDateTime.now())) {
-            log.warn("Confirmation token expired");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: confirmation token expired",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(CONFIRMATION_TOKEN_EXPIRED, "confirmation token expired");
         }
 
         confirmationTokenRepository.updateConfirmedAt(token, LocalDateTime.now());
         userRepository.enableUser(confirmationToken.getUser().getEmail());
 
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
         return success(
                 "success",
                 RegisterResponse.builder()
@@ -228,7 +291,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String email = forgotPasswordDTO.email();
 
         if (isNull(email)) {
-            log.warn("Please provide email for resetting your password");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: invalid request data",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     INVALID_REQUEST_DATA,
                     "Provide an email for resetting your password"
@@ -236,14 +303,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         if (emailValidator.validate(email)) {
-            log.warn("Email format is incorrect");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email format is incorrect",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
         }
 
         Optional<User> user = userRepository.findByEmail(email);
 
         if (user.isEmpty()) {
-            log.warn("User with email: {} does not exist", email);
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email will be sent if user exists",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     EMAIL_SENT_WITH_PASSWORD_RESET,
                     "we will send reset link to your email if it is exist"
@@ -251,15 +326,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         if (!user.get().isEnabled()) {
-            log.warn("User did not confirmed an email yet");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email is not confirmed",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     EMAIL_IS_NOT_CONFIRMED,
-                    "Email is not confirmed yet"
+                    "Email is not confirmed"
             );
         }
 
         if (!user.get().isAccountNonLocked()) {
-            log.warn("This user is blocked by admin");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: user is locked by admin",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     USER_IS_LOCKED_BY_ADMIN,
                     "User is locked by admin"
@@ -278,7 +361,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         int countDisabledTokens = disableAllActiveResetTokens(user.get());
 
         if (countDisabledTokens >= 3) {
-            log.warn("You exceeded the daily limit number of forgot email sending");
+            log.info(
+                    "requestPath: '{}', clientIp: '{}', function response: daily email sending limit exceeded",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     DAILY_EMAIL_LIMIT_EXCEEDED,
                     "Daily email sending limit exceeded for forgot email option"
@@ -312,6 +399,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             emailInfoRepository.save(emailInfo);
         }
 
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
         return success(
                 "success",
                 ForgotPasswordResponse.builder()
@@ -322,14 +414,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public Response<?> resetPassword(ResetPasswordDTO resetPasswordDTO) {
-        log.info("Calling resetPassword function with parameters");
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function calling with parameters",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
 
         String password = resetPasswordDTO.newPassword();
         String confirmPassword = resetPasswordDTO.confirmNewPassword();
         String token = resetPasswordDTO.token();
 
         if (isNull(password, confirmPassword, token)) {
-            log.warn("Invalid request data");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: invalid request data",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     INVALID_REQUEST_DATA,
                     "Invalid request data"
@@ -337,7 +437,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         if (!token.matches(RESET_PASSWORD_TOKEN_REGEX)) {
-            log.warn("Reset password token is invalid");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: invalid token",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     INVALID_TOKEN,
                     "reset password token is invalid"
@@ -348,34 +452,50 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 resetPasswordTokenRepository.findResetPasswordTokenByToken(token).orElse(null);
 
         if (Objects.isNull(resetPasswordToken)) {
-            log.warn("Reset password token not found");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: token not found",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     NOT_FOUND,
                     "Reset password token not found"
             );
         }
 
-        if (resetPasswordToken.status.equals(Status.INACTIVE)) {
-            log.warn("Token is disabled");
-            return failed(
-                    TOKEN_DISABLED,
-                    "Reset password token is disabled"
-            );
-        }
-
         LocalDateTime currentTime = LocalDateTime.now();
         if (currentTime.isAfter(resetPasswordToken.expiresAt)) {
-            log.warn("Reset password token is expired");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: token expired",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     TOKEN_EXPIRED,
                     "Reset password token is expired"
             );
         }
 
+        if (resetPasswordToken.status.equals(Status.INACTIVE)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: token is used",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return failed(
+                    TOKEN_DISABLED,
+                    "Reset password token is disabled"
+            );
+        }
+
         User user = resetPasswordTokenRepository.getUserByActiveToken(token).orElse(null);
 
         if (Objects.isNull(user)) {
-            log.warn("User is not found");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: user not found",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     NOT_FOUND,
                     "User is not found"
@@ -383,7 +503,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         if (!password.equals(confirmPassword)) {
-            log.warn("Passwords did not match");
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: passwords did not match",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             return failed(
                     PASSWORDS_DID_NOT_MATCH,
                     "Passwords did not match"
@@ -403,6 +527,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
 
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
         return success("success", null);
     }
 
