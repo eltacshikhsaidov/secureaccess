@@ -152,7 +152,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         emailInfoRepository.save(emailInfo);
 
-        log.warn(
+        log.info(
                 "requestPath: '{}', clientIp: '{}', function response: success",
                 logDetail.getRequestPath(),
                 logDetail.getIp()
@@ -168,7 +168,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public Response<?> login(LoginDTO request) {
 
-        log.warn(
+        log.info(
                 "requestPath: '{}', clientIp: '{}', function calling with request",
                 logDetail.getRequestPath(),
                 logDetail.getIp()
@@ -245,6 +245,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public Response<?> confirmToken(String token) {
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function calling with request: {}",
+                logDetail.getRequestPath(),
+                logDetail.getIp(),
+                token
+        );
+
         ConfirmationToken confirmationToken = confirmationTokenRepository
                 .findByToken(token)
                 .orElseThrow(
@@ -288,6 +295,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public Response<?> forgotPassword(ForgotPasswordDTO forgotPasswordDTO) {
+
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function calling with request: {}",
+                logDetail.getRequestPath(),
+                logDetail.getIp(),
+                forgotPasswordDTO
+        );
         String email = forgotPasswordDTO.email();
 
         if (isNull(email)) {
@@ -361,7 +375,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         int countDisabledTokens = disableAllActiveResetTokens(user.get());
 
         if (countDisabledTokens >= 3) {
-            log.info(
+            log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: daily email sending limit exceeded",
                     logDetail.getRequestPath(),
                     logDetail.getIp()
