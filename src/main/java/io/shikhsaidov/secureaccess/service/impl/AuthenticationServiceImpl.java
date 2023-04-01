@@ -115,8 +115,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         var savedUser = userRepository.save(user);
 
-        // creating confirmation token
-        String token = UUID.randomUUID().toString();
+        String token = generateToken();
 
         ConfirmationToken confirmationToken = ConfirmationToken.builder()
                 .token(token)
@@ -363,7 +362,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             );
         }
 
-        String token = generateResetToken();
+        String token = generateToken();
 
         var resetPasswordToken = ResetPasswordToken.builder()
                 .token(token)
@@ -571,7 +570,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         tokenRepository.saveAll(validUserTokens);
     }
 
-    private String generateResetToken() {
+    private String generateToken() {
         return UUID.randomUUID().toString();
     }
 

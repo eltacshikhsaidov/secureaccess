@@ -2,6 +2,7 @@ package io.shikhsaidov.secureaccess.filter;
 
 import io.shikhsaidov.secureaccess.repository.TokenRepository;
 import io.shikhsaidov.secureaccess.service.JwtService;
+import io.shikhsaidov.secureaccess.util.LogDetail;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,7 @@ import static io.shikhsaidov.secureaccess.util.Utility.object2Json;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private final LogDetail logDetail;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final TokenRepository tokenRepository;
@@ -53,7 +55,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             userEmail = jwtService.extractUsername(jwt);
         } catch (RuntimeException e) {
-            log.info("exception message: {}", e.getMessage());
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: {}",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp(),
+                    e.getMessage()
+            );
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write(
@@ -84,6 +91,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
+
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
         filterChain.doFilter(request, response);
     }
 }
