@@ -1,8 +1,10 @@
 package io.shikhsaidov.secureaccess.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import io.shikhsaidov.secureaccess.entity.User;
+import io.shikhsaidov.secureaccess.enums.Status;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -23,5 +25,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Modifying
     @Query("update User u set u.password=?2 where u.id=?1")
     void updatePasswordByUserId(Integer userId, String password);
+
+    List<User> findUsersByStatusAndLockedAndEnabled(Status status, boolean locked, boolean enabled);
 
 }

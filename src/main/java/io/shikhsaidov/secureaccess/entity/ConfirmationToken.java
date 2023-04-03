@@ -1,5 +1,6 @@
 package io.shikhsaidov.secureaccess.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.Hibernate;
@@ -41,6 +42,7 @@ public class ConfirmationToken {
             nullable = false,
             name = "user_id"
     )
+    @JsonBackReference
     private User user;
 
     @Override

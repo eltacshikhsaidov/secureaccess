@@ -1,5 +1,6 @@
 package io.shikhsaidov.secureaccess.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import io.shikhsaidov.secureaccess.enums.TokenType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,5 +37,6 @@ public class Token {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonBackReference
     public User user;
 }
