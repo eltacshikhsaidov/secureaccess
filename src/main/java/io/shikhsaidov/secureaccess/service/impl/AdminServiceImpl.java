@@ -1,9 +1,13 @@
 package io.shikhsaidov.secureaccess.service.impl;
 
+import io.shikhsaidov.secureaccess.entity.EmailInfo;
 import io.shikhsaidov.secureaccess.entity.User;
+import io.shikhsaidov.secureaccess.enums.EmailStatus;
 import io.shikhsaidov.secureaccess.enums.Status;
+import io.shikhsaidov.secureaccess.repository.EmailInfoRepository;
 import io.shikhsaidov.secureaccess.repository.UserRepository;
 import io.shikhsaidov.secureaccess.response.Response;
+import io.shikhsaidov.secureaccess.response.model.EmailsResponse;
 import io.shikhsaidov.secureaccess.response.model.EnvResponse;
 import io.shikhsaidov.secureaccess.response.model.UsersResponse;
 import io.shikhsaidov.secureaccess.service.AdminService;
@@ -26,6 +30,7 @@ public class AdminServiceImpl implements AdminService {
 
     private final LogDetail logDetail;
     private final UserRepository userRepository;
+    private final EmailInfoRepository emailInfoRepository;
 
     @Value("${application.environment}")
     public String environment;
@@ -89,5 +94,36 @@ public class AdminServiceImpl implements AdminService {
                 logDetail.getIp()
         );
         return success("success", UsersResponse.builder().users(users).build());
+    }
+
+    @Override
+    public Response<?> getEmails(EmailStatus emailStatus) {
+        log.info(
+                "requestPath: '{}', clientIp: '{}', calling function with parameters: emailStatus='{}'",
+                logDetail.getRequestPath(),
+                logDetail.getIp(),
+                emailStatus.name()
+        );
+
+        List<EmailInfo> emailInfos = emailInfoRepository.findEmailInfosByStatus(emailStatus).orElse(null);
+
+        if (isNull(emailInfos)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: email info list is empty",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(
+                    EMAIL_LIST_IS_EMPTY,
+                    "Email list is empty"
+            );
+        }
+
+        log.info(
+                "requestPath: '{}', clientIp: '{}', calling function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
+        return success("success", EmailsResponse.builder().emailInfos(emailInfos).build());
     }
 }

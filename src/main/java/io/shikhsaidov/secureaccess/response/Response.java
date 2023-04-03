@@ -41,4 +41,12 @@ public class Response<T> {
         );
     }
 
+    public static Response<?> response(Integer code, String msg) {
+        return new Response<>(
+                code,
+                msg,
+                null
+        );
+    }
+
 }

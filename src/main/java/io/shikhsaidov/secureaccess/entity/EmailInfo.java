@@ -1,5 +1,6 @@
 package io.shikhsaidov.secureaccess.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.shikhsaidov.secureaccess.enums.EmailStatus;
 import io.shikhsaidov.secureaccess.enums.EmailType;
 import jakarta.persistence.*;
@@ -36,5 +37,6 @@ public class EmailInfo {
 
     @OneToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     public User user;
 }

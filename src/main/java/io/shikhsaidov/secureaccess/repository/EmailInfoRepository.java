@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EmailInfoRepository extends JpaRepository<EmailInfo, Long> {
@@ -19,4 +20,7 @@ public interface EmailInfoRepository extends JpaRepository<EmailInfo, Long> {
     @Modifying
     @Query("update EmailInfo e set e.retriedAt=?2, e.retryCount=?3, e.status=?4 where e.id=?1")
     void updateEmailInfoById(Long id, LocalDateTime retriedAt, Integer retryCount, EmailStatus emailStatus);
+
+    @Transactional
+    Optional<List<EmailInfo>> findEmailInfosByStatus(EmailStatus status);
 }

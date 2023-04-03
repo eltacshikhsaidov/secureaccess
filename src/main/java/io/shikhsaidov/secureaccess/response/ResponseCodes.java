@@ -21,4 +21,6 @@ public class ResponseCodes {
     public static final Integer TOKEN_DISABLED = 18;
     public static final Integer TOKEN_EXPIRED = 19;
     public static final Integer EXCEPTION_OCCURRED = 20;
+    public static final Integer EMAIL_LIST_IS_EMPTY = 21;
+    public static final Integer BAD_REQUEST = 22;
 }
