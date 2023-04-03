@@ -8,7 +8,6 @@ import io.shikhsaidov.secureaccess.response.model.EnvResponse;
 import io.shikhsaidov.secureaccess.response.model.UsersResponse;
 import io.shikhsaidov.secureaccess.service.AdminService;
 import io.shikhsaidov.secureaccess.util.LogDetail;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -81,9 +80,7 @@ public class AdminServiceImpl implements AdminService {
         List<User> users = userRepository.findUsersByStatusAndLockedAndEnabled(status, locked, enabled);
 
         users.forEach(
-                user -> {
-                    user.setPassword("**********");
-                }
+                user -> user.setPassword("**********")
         );
 
         log.info(
