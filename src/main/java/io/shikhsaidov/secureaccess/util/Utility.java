@@ -64,4 +64,16 @@ public class Utility {
         }
 
     }
+
+    public static String getLanguage(HttpServletRequest request) {
+        String language;
+
+        if (isNull(request)) {
+            language = null;
+        } else {
+            language = request.getHeader("Accept-Language");
+        }
+
+        return language;
+    }
 }
