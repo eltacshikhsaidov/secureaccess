@@ -23,4 +23,5 @@ public class ResponseCodes {
     public static final Integer EXCEPTION_OCCURRED = 20;
     public static final Integer EMAIL_LIST_IS_EMPTY = 21;
     public static final Integer BAD_REQUEST = 22;
+    public static final Integer LANGUAGE_IS_NOT_SPECIFIED = 23;
 }

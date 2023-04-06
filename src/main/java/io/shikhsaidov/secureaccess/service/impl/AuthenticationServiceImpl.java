@@ -7,6 +7,7 @@ import io.shikhsaidov.secureaccess.dto.ResetPasswordDTO;
 import io.shikhsaidov.secureaccess.entity.*;
 import io.shikhsaidov.secureaccess.enums.*;
 import io.shikhsaidov.secureaccess.exception.TokenNotFound;
+import io.shikhsaidov.secureaccess.holder.HeaderHolder;
 import io.shikhsaidov.secureaccess.repository.*;
 import io.shikhsaidov.secureaccess.response.model.ForgotPasswordResponse;
 import io.shikhsaidov.secureaccess.response.model.LoginResponse;
@@ -55,6 +56,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final ConfirmationTokenRepository confirmationTokenRepository;
     private final EmailInfoRepository emailInfoRepository;
     private final ResetPasswordTokenRepository resetPasswordTokenRepository;
+    private final HeaderHolder headerHolder;
 
     @Value("${url}")
     public String url;
@@ -74,6 +76,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String password = request.password();
         String firstName = request.firstName();
         String lastName = request.lastName();
+        Language language = Language.of(headerHolder.getLanguage());
 
         if (isNull(email, password, firstName, lastName)) {
             log.warn(
