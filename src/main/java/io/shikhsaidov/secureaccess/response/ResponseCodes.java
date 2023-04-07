@@ -24,4 +24,5 @@ public class ResponseCodes {
     public static final Integer EMAIL_LIST_IS_EMPTY = 21;
     public static final Integer USER_NOT_FOUND = 22;
     public static final Integer BAD_CREDENTIALS = 23;
+    public static final Integer TRY_AGAIN_LATER = 24;
 }

@@ -8,11 +8,13 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.Random;
+
 @Log4j2
 public class Utility {
     public static boolean isNull(Object... objects) {
-        for (Object o: objects) {
-            if (java.util.Objects.isNull(o)){
+        for (Object o : objects) {
+            if (java.util.Objects.isNull(o)) {
                 return true;
             }
         }
@@ -64,4 +66,9 @@ public class Utility {
         }
 
     }
+    public static int randomBetween(int min, int max) {
+        Random rand = new Random();
+        return rand.nextInt((max - min) + 1) + min;
+    }
+
 }

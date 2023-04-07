@@ -27,6 +27,7 @@ import java.util.UUID;
 import static io.shikhsaidov.secureaccess.response.Response.*;
 import static io.shikhsaidov.secureaccess.response.ResponseCodes.*;
 import static io.shikhsaidov.secureaccess.util.Utility.isNull;
+import static io.shikhsaidov.secureaccess.util.Utility.randomBetween;
 import static java.util.Objects.nonNull;
 
 @Log4j2
@@ -47,6 +48,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final ConfirmationTokenRepository confirmationTokenRepository;
     private final EmailInfoRepository emailInfoRepository;
     private final ResetPasswordTokenRepository resetPasswordTokenRepository;
+    private final LoginHistoryRepository loginHistoryRepository;
 
     @Value("${url}")
     public String url;
@@ -214,6 +216,28 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(USER_IS_LOCKED_BY_ADMIN);
         }
 
+        int countLoginTryByIpAddress
+                = loginHistoryRepository.countLoginHistoriesByIpAddressAndLoginStatusAndLoginTimeBetween(
+                logDetail.getIp(),
+                LoginStatus.UNSUCCESSFUL,
+                LocalDateTime.now().minusMinutes(randomBetween(3, 7)),
+                LocalDateTime.now()
+        );
+
+        if (countLoginTryByIpAddress >= 3) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: please try again later",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(TRY_AGAIN_LATER);
+        }
+
+        var loginHistory = LoginHistory.builder()
+                .ipAddress(logDetail.getIp())
+                .user(checkUserInDB.get())
+                .build();
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -221,6 +245,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                             request.password()
                     )
             );
+
+            loginHistory.setLoginStatus(LoginStatus.SUCCESSFUL);
+            loginHistoryRepository.save(loginHistory);
         } catch (Exception e) {
             log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: {}",
@@ -228,6 +255,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getIp(),
                     e.getMessage()
             );
+            loginHistory.setLoginStatus(LoginStatus.UNSUCCESSFUL);
+            loginHistoryRepository.save(loginHistory);
             return response(BAD_CREDENTIALS);
         }
 
