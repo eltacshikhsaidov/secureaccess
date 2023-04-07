@@ -55,11 +55,17 @@ spring:
   #                      enable: true
   config:
     name: application,config
+      
 
 # Server configuration prod
 server:
   port: 8082 #set your port
   address: api.shortly.tech
+#  enabling character encoding in spring boot
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
 
 application:
   environment: prod
