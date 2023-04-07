@@ -66,8 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             response.getWriter().write(
                     object2Json(
                             failed(
-                                    TOKEN_IS_INVALID_OR_EXPIRED,
-                                    e.getMessage()
+                                    TOKEN_IS_INVALID_OR_EXPIRED
                             )
                     )
             );

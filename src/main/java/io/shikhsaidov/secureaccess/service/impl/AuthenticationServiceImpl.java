@@ -1,23 +1,14 @@
 package io.shikhsaidov.secureaccess.service.impl;
 
-import io.shikhsaidov.secureaccess.dto.ForgotPasswordDTO;
-import io.shikhsaidov.secureaccess.dto.LoginDTO;
-import io.shikhsaidov.secureaccess.dto.RegisterDTO;
-import io.shikhsaidov.secureaccess.dto.ResetPasswordDTO;
+import io.shikhsaidov.secureaccess.dto.*;
 import io.shikhsaidov.secureaccess.entity.*;
 import io.shikhsaidov.secureaccess.enums.*;
 import io.shikhsaidov.secureaccess.exception.TokenNotFound;
-import io.shikhsaidov.secureaccess.holder.HeaderHolder;
 import io.shikhsaidov.secureaccess.repository.*;
-import io.shikhsaidov.secureaccess.response.model.ForgotPasswordResponse;
-import io.shikhsaidov.secureaccess.response.model.LoginResponse;
-import io.shikhsaidov.secureaccess.response.model.RegisterResponse;
+import io.shikhsaidov.secureaccess.response.model.*;
 import io.shikhsaidov.secureaccess.response.Response;
-import io.shikhsaidov.secureaccess.service.AuthenticationService;
-import io.shikhsaidov.secureaccess.service.EmailService;
-import io.shikhsaidov.secureaccess.service.JwtService;
-import io.shikhsaidov.secureaccess.util.EmailUtil;
-import io.shikhsaidov.secureaccess.util.LogDetail;
+import io.shikhsaidov.secureaccess.service.*;
+import io.shikhsaidov.secureaccess.util.*;
 import io.shikhsaidov.secureaccess.util.validator.EmailValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -56,7 +47,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final ConfirmationTokenRepository confirmationTokenRepository;
     private final EmailInfoRepository emailInfoRepository;
     private final ResetPasswordTokenRepository resetPasswordTokenRepository;
-    private final HeaderHolder headerHolder;
 
     @Value("${url}")
     public String url;
@@ -67,6 +57,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public Response<?> register(RegisterDTO request) {
 
+
         log.info(
                 "requestPath: '{}', clientIp: '{}', function calling with request",
                 logDetail.getRequestPath(),
@@ -76,7 +67,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String password = request.password();
         String firstName = request.firstName();
         String lastName = request.lastName();
-        Language language = Language.of(headerHolder.getLanguage());
 
         if (isNull(email, password, firstName, lastName)) {
             log.warn(
@@ -84,7 +74,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(INVALID_REQUEST_DATA, "invalid request data");
+            return response(INVALID_REQUEST_DATA);
         }
 
         if (emailValidator.validate(email)) {
@@ -93,7 +83,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
+            return response(EMAIL_FORMAT_IS_INCORRECT);
         }
 
         // check if user is exists
@@ -105,7 +95,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return response(EMAIL_IS_TAKEN, "email is taken", null);
+            return response(EMAIL_IS_TAKEN);
         }
 
         var user = new User(
@@ -160,7 +150,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getIp()
         );
         return Response.success(
-                "success",
                 RegisterResponse.builder()
                         .message("confirmation link sent to your email address")
                         .build()
@@ -185,7 +174,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(INVALID_REQUEST_DATA, "invalid request data");
+            return response(INVALID_REQUEST_DATA);
         }
 
         if (emailValidator.validate(email)) {
@@ -194,7 +183,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
+            return response(EMAIL_FORMAT_IS_INCORRECT);
         }
 
         var checkUserInDB = userRepository.findByEmail(email);
@@ -204,7 +193,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(USER_IS_NOT_REGISTERED, "user is not registered");
+            return response(USER_IS_NOT_REGISTERED);
         }
 
         if (!checkUserInDB.get().isEnabled()) {
@@ -213,7 +202,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(EMAIL_IS_NOT_CONFIRMED, "email is not confirmed");
+            return response(EMAIL_IS_NOT_CONFIRMED);
         }
 
         if (!checkUserInDB.get().isAccountNonLocked()) {
@@ -222,7 +211,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(USER_IS_LOCKED_BY_ADMIN, "user is locked by admin");
+            return response(USER_IS_LOCKED_BY_ADMIN);
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.email(),
+                            request.password()
+                    )
+            );
+        } catch (Exception e) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: {}",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp(),
+                    e.getMessage()
+            );
+            return response(BAD_CREDENTIALS);
         }
 
         authenticationManager.authenticate(
@@ -242,7 +248,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getRequestPath(),
                 logDetail.getIp()
         );
-        return Response.success("success", LoginResponse.builder().token(jwtToken).build());
+        return success(LoginResponse.builder().token(jwtToken).build());
     }
 
     @Override
@@ -266,7 +272,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(EMAIL_IS_ALREADY_CONFIRMED, "email is already confirmed");
+            return response(EMAIL_IS_ALREADY_CONFIRMED);
         }
 
         LocalDateTime expiresAt = confirmationToken.getExpiresAt();
@@ -276,7 +282,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(CONFIRMATION_TOKEN_EXPIRED, "confirmation token expired");
+            return response(CONFIRMATION_TOKEN_EXPIRED);
         }
 
         confirmationTokenRepository.updateConfirmedAt(token, LocalDateTime.now());
@@ -288,7 +294,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getIp()
         );
         return success(
-                "success",
                 RegisterResponse.builder()
                         .message("token confirmed successfully")
                         .build()
@@ -312,10 +317,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    INVALID_REQUEST_DATA,
-                    "Provide an email for resetting your password"
-            );
+            return response(INVALID_REQUEST_DATA);
         }
 
         if (emailValidator.validate(email)) {
@@ -324,7 +326,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return response(EMAIL_FORMAT_IS_INCORRECT, "email format is incorrect", null);
+            return response(EMAIL_FORMAT_IS_INCORRECT);
         }
 
         Optional<User> user = userRepository.findByEmail(email);
@@ -335,10 +337,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    EMAIL_SENT_WITH_PASSWORD_RESET,
-                    "we will send reset link to your email if it is exist"
-            );
+            return response(EMAIL_SENT_WITH_PASSWORD_RESET);
         }
 
         if (!user.get().isEnabled()) {
@@ -347,10 +346,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    EMAIL_IS_NOT_CONFIRMED,
-                    "Email is not confirmed"
-            );
+            return response(EMAIL_IS_NOT_CONFIRMED);
         }
 
         if (!user.get().isAccountNonLocked()) {
@@ -359,10 +355,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    USER_IS_LOCKED_BY_ADMIN,
-                    "User is locked by admin"
-            );
+            return response(USER_IS_LOCKED_BY_ADMIN);
         }
 
         String token = generateToken();
@@ -382,10 +375,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    DAILY_EMAIL_LIMIT_EXCEEDED,
-                    "Daily email sending limit exceeded for forgot email option"
-            );
+            return failed(DAILY_EMAIL_LIMIT_EXCEEDED);
         }
 
         resetPasswordTokenRepository.save(resetPasswordToken);
@@ -421,7 +411,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getIp()
         );
         return success(
-                "success",
                 ForgotPasswordResponse.builder()
                         .message("Reset instructions sent to your email address")
                         .build()
@@ -446,10 +435,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    INVALID_REQUEST_DATA,
-                    "Invalid request data"
-            );
+            return response(INVALID_REQUEST_DATA);
         }
 
         if (!token.matches(RESET_PASSWORD_TOKEN_REGEX)) {
@@ -458,10 +444,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    INVALID_TOKEN,
-                    "reset password token is invalid"
-            );
+            return response(INVALID_RESET_PASSWORD_TOKEN);
         }
 
         ResetPasswordToken resetPasswordToken =
@@ -473,10 +456,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    NOT_FOUND,
-                    "Reset password token not found"
-            );
+            return response(RESET_PASSWORD_TOKEN_NOT_FOUND);
         }
 
         LocalDateTime currentTime = LocalDateTime.now();
@@ -486,10 +466,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    TOKEN_EXPIRED,
-                    "Reset password token is expired"
-            );
+            return response(RESET_PASSWORD_TOKEN_EXPIRED);
         }
 
         if (resetPasswordToken.status.equals(Status.INACTIVE)) {
@@ -498,24 +475,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    TOKEN_DISABLED,
-                    "Reset password token is disabled"
-            );
+            return response(RESET_PASSWORD_TOKEN_IS_DISABLED);
         }
 
         User user = resetPasswordTokenRepository.getUserByActiveToken(token).orElse(null);
 
-        if (Objects.isNull(user)) {
+        if (isNull(user)) {
             log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: user not found",
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    NOT_FOUND,
-                    "User is not found"
-            );
+            return response(USER_NOT_FOUND);
         }
 
         if (!password.equals(confirmPassword)) {
@@ -524,22 +495,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    PASSWORDS_DID_NOT_MATCH,
-                    "Passwords did not match"
-            );
+            return response(PASSWORDS_DID_NOT_MATCH);
         }
 
         try {
             log.info("Updating user data");
-            userRepository.updatePasswordByUserId(user.getId(), passwordEncoder.encode(password));
+            userRepository.updatePasswordByUserId(
+                    Objects.requireNonNull(user).getId(), passwordEncoder.encode(password)
+            );
             resetPasswordTokenRepository.updateAllByStatusAndUser(Status.INACTIVE, user);
         } catch (Exception e) {
             log.warn("Exception occurred while updating user, message: {}", e.getMessage());
-            return failed(
-                    EXCEPTION_OCCURRED,
-                    "Exception occurred while updating user"
-            );
+            return failed(EXCEPTION_OCCURRED);
         }
 
 
@@ -548,7 +515,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getRequestPath(),
                 logDetail.getIp()
         );
-        return success("success", null);
+        return success(null);
     }
 
     private void saveUserToken(User user, String jwtToken) {

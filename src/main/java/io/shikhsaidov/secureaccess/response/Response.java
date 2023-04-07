@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import static io.shikhsaidov.secureaccess.response.ResponseCodes.*;
+import static io.shikhsaidov.secureaccess.util.Translator.translate;
 
 @Data
 @AllArgsConstructor
@@ -17,34 +18,34 @@ public class Response<T> {
     private String message;
     private T data;
 
-    public static <T> Response<T> success(String message, T data) {
+    public static <T> Response<T> success(T data) {
         return new Response<>(
                 SUCCESS,
-                message,
+                translate(SUCCESS.toString()),
                 data
         );
     }
 
-    public static Response<?> failed(Integer code, String msg) {
+    public static Response<?> failed(Integer code) {
         return new Response<>(
                 code,
-                msg,
+                translate(code.toString()),
                 null
         );
     }
 
-    public static <T> Response<?> response(Integer code, String msg, T data) {
+    public static <T> Response<?> response(Integer code, T data) {
         return new Response<>(
                 code,
-                msg,
+                translate(code.toString()),
                 data
         );
     }
 
-    public static Response<?> response(Integer code, String msg) {
+    public static Response<?> response(Integer code) {
         return new Response<>(
                 code,
-                msg,
+                translate(code.toString()),
                 null
         );
     }

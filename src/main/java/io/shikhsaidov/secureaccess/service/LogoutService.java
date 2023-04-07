@@ -38,11 +38,7 @@ public class LogoutService implements LogoutHandler {
             log.info("Token is invalid");
 
             String invalidTokenJsonResponse = object2Json(
-                    response(
-                            TOKEN_IS_INVALID_OR_EXPIRED,
-                            "Token is invalid or expired",
-                            null
-                    )
+                    response(TOKEN_IS_INVALID_OR_EXPIRED)
             );
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setStatus(HttpStatus.BAD_REQUEST.value());
@@ -65,11 +61,7 @@ public class LogoutService implements LogoutHandler {
 
         log.info("Successfully logged out!");
         String logoutJsonResponse = object2Json(
-                response(
-                        SUCCESS,
-                        "successfully logged out",
-                        null
-                )
+                response(SUCCESS)
         );
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.OK.value());

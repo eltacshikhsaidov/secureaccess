@@ -49,10 +49,7 @@ public class AdminServiceImpl implements AdminService {
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return failed(
-                    NO_ENVIRONMENT_IS_PRESENT,
-                    "No environment is present"
-            );
+            return failed(NO_ENVIRONMENT_IS_PRESENT);
         }
 
         log.info(
@@ -61,7 +58,6 @@ public class AdminServiceImpl implements AdminService {
                 logDetail.getIp()
         );
         return success(
-                "success",
                 EnvResponse.builder()
                         .environment(environment)
                         .build()
@@ -93,7 +89,7 @@ public class AdminServiceImpl implements AdminService {
                 logDetail.getRequestPath(),
                 logDetail.getIp()
         );
-        return success("success", UsersResponse.builder().users(users).build());
+        return success(UsersResponse.builder().users(users).build());
     }
 
     @Override
@@ -124,6 +120,6 @@ public class AdminServiceImpl implements AdminService {
                 logDetail.getRequestPath(),
                 logDetail.getIp()
         );
-        return success("success", EmailsResponse.builder().emailInfos(emailInfos).build());
+        return success(EmailsResponse.builder().emailInfos(emailInfos).build());
     }
 }
