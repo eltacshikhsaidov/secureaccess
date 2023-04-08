@@ -260,12 +260,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(BAD_CREDENTIALS);
         }
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
         var user = userRepository.findByEmail(request.email())
                 .orElseThrow();
         var jwtToken = jwtService.generateToken(user);
