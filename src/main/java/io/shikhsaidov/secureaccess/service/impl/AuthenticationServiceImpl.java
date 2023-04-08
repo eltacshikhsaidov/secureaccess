@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,6 +54,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final IpDataUtil ipDataUtil;
     private final LoginLocationRepository loginLocationRepository;
     private final HeaderHolder headerHolder;
+    private final UserRecognizedDevicesRepository userRecognizedDevicesRepository;
+    private final UserBlockedDeviceRepository userBlockedDeviceRepository;
 
     @Value("${url}")
     public String url;
@@ -120,6 +123,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .token(token)
                 .expiresAt(LocalDateTime.now().plusMinutes(15))
                 .user(savedUser)
+                .confirmationTokenType(ConfirmationTokenType.EMAIL_CONFIRMATION)
                 .build();
 
         confirmationTokenRepository.save(confirmationToken);
@@ -240,11 +244,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var loginLocation = ipDataUtil.loginLocation(logDetail.getIp());
         loginLocationRepository.save(loginLocation);
 
+        String deviceName = headerHolder.getUserAgent();
         var loginHistory = LoginHistory.builder()
                 .ipAddress(logDetail.getIp())
                 .user(checkUserInDB.get())
                 .loginLocation(loginLocation)
-                .deviceName(headerHolder.getUserAgent())
+                .deviceName(deviceName)
                 .build();
 
         try {
@@ -254,6 +259,91 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                             request.password()
                     )
             );
+
+            List<LoginHistory> loginHistories = loginHistoryRepository.findAllByLoginStatus(
+                    LoginStatus.SUCCESSFUL
+            );
+
+            if (loginHistories.size() == 0) {
+                log.info(
+                        "requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                                "adding first device as recognized for this user",
+                        logDetail.getRequestPath(),
+                        logDetail.getIp()
+                );
+
+                var userRecognizedDevice = UserRecognizedDevice.builder()
+                        .deviceName(deviceName)
+                        .ipAddress(logDetail.getIp())
+                        .user(checkUserInDB.get())
+                        .build();
+                userRecognizedDevicesRepository.save(userRecognizedDevice);
+            } else {
+                // check if next device is used as recognized or not
+                var userRecognisedDevices = userRecognizedDevicesRepository.findAllByUser(checkUserInDB.get());
+                boolean isDeviceRecognised = userRecognisedDevices.stream().anyMatch(
+                        recognizedDevice -> recognizedDevice.getDeviceName().equalsIgnoreCase(deviceName)
+                );
+
+                if (!isDeviceRecognised) {
+                    log.warn(
+                            "requestPath: '{}', clientIp: '{}', function response: new device detected",
+                            logDetail.getRequestPath(),
+                            logDetail.getIp()
+                    );
+
+                    String token = generateToken();
+
+                    // automatically add device as blocked while user accepts it
+                    var userBlockedDevice = UserBlockedDevice.builder()
+                            .deviceName(deviceName)
+                            .user(checkUserInDB.get())
+                            .token(token)
+                            .ipAddress(logDetail.getIp())
+                            .build();
+                    userBlockedDeviceRepository.save(userBlockedDevice);
+
+                    ConfirmationToken confirmationToken = ConfirmationToken.builder()
+                            .token(token)
+                            .expiresAt(LocalDateTime.now().plusMinutes(5))
+                            .user(checkUserInDB.get())
+                            .confirmationTokenType(ConfirmationTokenType.NEW_DEVICE_CONFIRMATION)
+                            .build();
+
+                    confirmationTokenRepository.save(confirmationToken);
+
+                    var emailInfo = EmailInfo.builder()
+                            .emailTo(email)
+                            .subject("Unrecognized device")
+                            .content(
+                                    emailUtil.informNewDeviceTemplate(
+                                            checkUserInDB.get().getFirstname(),
+                                            loginLocation.getLatitude(),
+                                            loginLocation.getLongitude(),
+                                            url + "v1/auth/verify-device?token=".concat(token)
+                                    ).getBytes()
+                            )
+                            .type(EmailType.INFO)
+                            .user(checkUserInDB.get())
+                            .build();
+
+                    // send mail
+                    try {
+                        log.info("Sending email to user");
+                        emailService.sendEmail(emailInfo);
+                        emailInfo.setStatus(EmailStatus.SENT);
+                    } catch (Exception e) {
+                        log.warn("Sending email failed," +
+                                " exception message: {}", e.getMessage());
+                        emailInfo.setStatus(EmailStatus.RETRY);
+                    }
+
+                    emailInfoRepository.save(emailInfo);
+
+
+                    return response(VERIFY_NEW_DEVICE);
+                }
+            }
 
             loginHistory.setLoginStatus(LoginStatus.SUCCESSFUL);
             loginHistoryRepository.save(loginHistory);
@@ -365,7 +455,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         if (user.isEmpty()) {
             log.warn(
-                    "requestPath: '{}', clientIp: '{}', function response: email will be sent if user exists",
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "email will be sent if user exists",
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
@@ -403,7 +494,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         if (countDisabledTokens >= 3) {
             log.warn(
-                    "requestPath: '{}', clientIp: '{}', function response: daily email sending limit exceeded",
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "daily email sending limit exceeded",
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
@@ -550,6 +642,80 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return success(null);
     }
 
+    @Override
+    public Response<?> verifyDevice(String token) {
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function calling with parameters: {}",
+                logDetail.getRequestPath(),
+                logDetail.getIp(),
+                token
+        );
+
+        if (isNull(token)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: verification token is null",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(DEVICE_VERIFICATION_TOKEN_IS_NULL);
+        }
+
+        // regex is same with reset password token
+        if (!token.matches(RESET_PASSWORD_TOKEN_REGEX)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "device verification token is invalid",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(DEVICE_VERIFICATION_TOKEN_IS_NOT_VALID);
+        }
+
+        ConfirmationToken confirmationToken = confirmationTokenRepository
+                .findByToken(token)
+                .orElseThrow(
+                        () -> new TokenNotFound("token not found")
+                );
+
+        if (nonNull(confirmationToken.getConfirmedAt())) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "device verification token is already confirmed",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(DEVICE_VERIFICATION_TOKEN_IS_ALREADY_CONFIRMED);
+        }
+
+        LocalDateTime expiresAt = confirmationToken.getExpiresAt();
+        if (expiresAt.isBefore(LocalDateTime.now())) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: confirmation token expired",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(CONFIRMATION_TOKEN_EXPIRED);
+        }
+
+        var userBlockedDevice = userBlockedDeviceRepository.findByToken(token);
+        var userRecognizedDevice = UserRecognizedDevice.builder()
+                .deviceName(userBlockedDevice.getDeviceName())
+                .ipAddress(logDetail.getIp())
+                .user(userBlockedDevice.user)
+                .build();
+        userRecognizedDevicesRepository.save(userRecognizedDevice);
+        confirmationTokenRepository.updateConfirmedAt(token, LocalDateTime.now());
+        userBlockedDeviceRepository.updateUserBlockedDeviceByToken(token, Status.INACTIVE);
+
+
+        log.info(
+                "requestPath: '{}', clientIp: '{}', function response: success",
+                logDetail.getRequestPath(),
+                logDetail.getIp()
+        );
+        return success(null);
+    }
+
     private void saveUserToken(User user, String jwtToken) {
         var token = Token.builder()
                 .user(user)
@@ -580,8 +746,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         resetPasswordTokenRepository.updateAllByStatusAndUser(Status.INACTIVE, user);
 
         LocalDateTime localDateTime = LocalDateTime.now();
-        LocalDateTime startedAt = localDateTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime endsAt = localDateTime.withHour(23).withMinute(59).withSecond(59).withNano(9999999);
+        LocalDateTime startedAt
+                = localDateTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime endsAt
+                = localDateTime.withHour(23).withMinute(59).withSecond(59).withNano(9999999);
         return resetPasswordTokenRepository.countByStatusAndCreatedAtBetween(Status.INACTIVE, startedAt, endsAt);
     }
 }

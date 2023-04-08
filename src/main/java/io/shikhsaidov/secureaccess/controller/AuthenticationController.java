@@ -36,5 +36,9 @@ public class AuthenticationController {
     public Response<?> resetPassword(@RequestBody ResetPasswordDTO request) {
         return service.resetPassword(request);
     }
+    @GetMapping(path = "/verify-device")
+    public Response<?> verifyDevice(@RequestParam(name = "token") String token) {
+        return service.verifyDevice(token);
+    }
 
 }

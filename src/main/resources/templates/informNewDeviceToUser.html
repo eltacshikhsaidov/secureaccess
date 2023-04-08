@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Unrecognized Device Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            width: 80%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 0;
+        }
+
+        p {
+            margin-bottom: 20px;
+        }
+
+        button {
+            display: block;
+            margin: 0 auto;
+            padding: 10px 20px;
+            background-color: #00aeeb;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #029cd2;
+        }
+
+        #map {
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+        strong {
+            color: #ff4949;
+        }
+    </style>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=api_key_replace"></script>
+    <script>
+        function initMap() {
+
+            let unrecognizedDeviceCoordinates = {
+                lat: parseFloat('latitude_replace'),
+                lng: parseFloat('longitude_replace')
+            }; // Replace with your desired latitude and longitude
+            let map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: unrecognizedDeviceCoordinates
+            });
+            let marker = new google.maps.Marker({
+                position: unrecognizedDeviceCoordinates,
+                map: map,
+                title: 'Unrecognized device'
+            });
+
+            let infoWindow = new google.maps.InfoWindow({
+                content: 'Unrecognized device location'
+            });
+
+            marker.addListener('mouseover', function () {
+                infoWindow.open(map, marker);
+            });
+        }
+    </script>
+</head>
+<body onload="initMap()">
+<div class="container">
+    <h1>Unrecognized Device Verification</h1>
+    <p><strong>Security risk!!!</strong>
+        <br>
+        name_replace, a new device has attempted to access your account. To ensure your security, please verify
+        this device and
+        location by clicking the button below.</p>
+    <a href="link_replace" target="_blank" style="border: solid 1px #00aeeb; border-radius: 5px; box-sizing: border-box; cursor: pointer; display: inline-block; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-decoration: none; text-transform: capitalize; background-color: #00aeeb; border-color: #00aeeb; color: #ffffff;">Verify device</a>
+    <div id="map" style="height: 50vh; width: 100%;"></div>
+</div>
+
+<!-- START FOOTER -->
+<div class="footer" style="clear: both; margin-top: 10px; text-align: center; width: 100%;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0"
+           style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
+        <tr>
+            <td class="content-block"
+                style="font-family: sans-serif; vertical-align: top; padding-bottom: 10px; padding-top: 10px; color: #999999; font-size: 12px; text-align: center;"
+                valign="top" align="center">
+                <span class="apple-link" style="color: #999999; font-size: 12px; text-align: center;">SecureAccess, Bakı, Azərbaycan</span>
+                <br><a href="https://secureaccess.az"
+                       style="text-decoration: underline; color: #999999; font-size: 12px; text-align: center;"><b>secureaccess.az</b></a>.
+            </td>
+        </tr>
+    </table>
+</div>
+<!-- END FOOTER -->
+</body>
+</html>
+

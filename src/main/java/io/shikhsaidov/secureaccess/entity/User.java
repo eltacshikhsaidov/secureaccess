@@ -57,6 +57,11 @@ public class User implements UserDetails {
     @LazyCollection(LazyCollectionOption.FALSE)
     private List<ConfirmationToken> confirmationTokens;
 
+    @OneToMany(mappedBy = "user")
+    @ToString.Exclude
+    @LazyCollection(LazyCollectionOption.FALSE)
+    private List<UserRecognizedDevice> userRecognizedDevices;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role.name()));

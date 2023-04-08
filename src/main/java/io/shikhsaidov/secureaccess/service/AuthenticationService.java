@@ -13,4 +13,6 @@ public interface AuthenticationService {
 
     Response<?> forgotPassword(ForgotPasswordDTO forgotPasswordDTO);
     Response<?> resetPassword(ResetPasswordDTO resetPasswordDTO);
+
+    Response<?> verifyDevice(String token);
 }

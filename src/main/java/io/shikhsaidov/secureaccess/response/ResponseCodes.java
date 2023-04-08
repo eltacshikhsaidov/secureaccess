@@ -25,4 +25,8 @@ public class ResponseCodes {
     public static final Integer USER_NOT_FOUND = 22;
     public static final Integer BAD_CREDENTIALS = 23;
     public static final Integer TRY_AGAIN_LATER = 24;
+    public static final Integer VERIFY_NEW_DEVICE = 25;
+    public static final Integer DEVICE_VERIFICATION_TOKEN_IS_NULL = 26;
+    public static final Integer DEVICE_VERIFICATION_TOKEN_IS_NOT_VALID = 27;
+    public static final Integer DEVICE_VERIFICATION_TOKEN_IS_ALREADY_CONFIRMED = 28;
 }

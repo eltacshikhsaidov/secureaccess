@@ -27,6 +27,7 @@ public class SecurityConfiguration {
     private static final String[] PERMIT_ALL = {
             "/v1/auth/**",
             "/v1/auth/confirm**",
+            "/v1/auth/verify-device**",
             "/error",
             "/v1/test/public"
     };

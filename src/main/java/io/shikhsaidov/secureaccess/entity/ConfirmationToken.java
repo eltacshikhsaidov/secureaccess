@@ -1,6 +1,7 @@
 package io.shikhsaidov.secureaccess.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import io.shikhsaidov.secureaccess.enums.ConfirmationTokenType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.Hibernate;
@@ -36,6 +37,9 @@ public class ConfirmationToken {
     private LocalDateTime expiresAt;
 
     private LocalDateTime confirmedAt;
+
+    @Enumerated(EnumType.STRING)
+    private ConfirmationTokenType confirmationTokenType;
 
     @ManyToOne
     @JoinColumn(
