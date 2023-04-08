@@ -24,6 +24,9 @@ public class LoginHistory {
     @Enumerated(EnumType.STRING)
     private LoginStatus loginStatus;
     @ManyToOne
+    @JoinColumn(name = "login_location_id")
+    private LoginLocation loginLocation;
+    @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 }

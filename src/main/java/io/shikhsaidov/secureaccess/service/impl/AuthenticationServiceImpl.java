@@ -49,6 +49,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final EmailInfoRepository emailInfoRepository;
     private final ResetPasswordTokenRepository resetPasswordTokenRepository;
     private final LoginHistoryRepository loginHistoryRepository;
+    private final IpDataUtil ipDataUtil;
+    private final LoginLocationRepository loginLocationRepository;
 
     @Value("${url}")
     public String url;
@@ -233,9 +235,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(TRY_AGAIN_LATER);
         }
 
+        var loginLocation = ipDataUtil.loginLocation(logDetail.getIp());
+        loginLocationRepository.save(loginLocation);
+
         var loginHistory = LoginHistory.builder()
                 .ipAddress(logDetail.getIp())
                 .user(checkUserInDB.get())
+                .loginLocation(loginLocation)
                 .build();
 
         try {
