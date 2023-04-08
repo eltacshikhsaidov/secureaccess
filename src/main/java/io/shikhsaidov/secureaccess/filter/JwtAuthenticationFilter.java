@@ -25,6 +25,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import static io.shikhsaidov.secureaccess.response.Response.failed;
 import static io.shikhsaidov.secureaccess.response.ResponseCodes.TOKEN_IS_INVALID_OR_EXPIRED;
+import static io.shikhsaidov.secureaccess.util.Utility.isNull;
 import static io.shikhsaidov.secureaccess.util.Utility.object2Json;
 
 @Log4j2
@@ -46,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (isNull(authHeader) || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -63,13 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             );
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.getWriter().write(
-                    object2Json(
-                            failed(
-                                    TOKEN_IS_INVALID_OR_EXPIRED
-                            )
-                    )
-            );
+            response.getWriter().write(object2Json(failed(TOKEN_IS_INVALID_OR_EXPIRED)));
             return;
         }
 
