@@ -1,7 +1,6 @@
 package io.shikhsaidov.secureaccess.util;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
 @Data
 public class LogDetail {
