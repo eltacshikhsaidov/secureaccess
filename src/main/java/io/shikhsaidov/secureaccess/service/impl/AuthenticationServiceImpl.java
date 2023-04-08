@@ -4,6 +4,7 @@ import io.shikhsaidov.secureaccess.dto.*;
 import io.shikhsaidov.secureaccess.entity.*;
 import io.shikhsaidov.secureaccess.enums.*;
 import io.shikhsaidov.secureaccess.exception.TokenNotFound;
+import io.shikhsaidov.secureaccess.holder.HeaderHolder;
 import io.shikhsaidov.secureaccess.repository.*;
 import io.shikhsaidov.secureaccess.response.model.*;
 import io.shikhsaidov.secureaccess.response.Response;
@@ -51,6 +52,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final LoginHistoryRepository loginHistoryRepository;
     private final IpDataUtil ipDataUtil;
     private final LoginLocationRepository loginLocationRepository;
+    private final HeaderHolder headerHolder;
 
     @Value("${url}")
     public String url;
@@ -242,6 +244,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .ipAddress(logDetail.getIp())
                 .user(checkUserInDB.get())
                 .loginLocation(loginLocation)
+                .deviceName(headerHolder.getUserAgent())
                 .build();
 
         try {

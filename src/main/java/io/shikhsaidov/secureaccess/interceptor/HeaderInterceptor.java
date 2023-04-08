@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import static io.shikhsaidov.secureaccess.util.Utility.isNull;
+
 @RequiredArgsConstructor
 public class HeaderInterceptor implements HandlerInterceptor {
     private final HeaderHolder headerHolder;
@@ -17,8 +19,8 @@ public class HeaderInterceptor implements HandlerInterceptor {
             @NonNull HttpServletResponse response,
             @NonNull Object handler
     ) {
-        String language = request.getHeader("Accept-Language");
-        headerHolder.setLanguage(language);
+        String userAgent = request.getHeader("User-Agent");
+        headerHolder.setUserAgent(isNull(userAgent) ? "Unrecognized" : userAgent);
         return true;
     }
 

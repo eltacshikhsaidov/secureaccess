@@ -21,6 +21,7 @@ public class LoginHistory {
     private String ipAddress;
     @CreationTimestamp
     private LocalDateTime loginTime;
+    private String deviceName;
     @Enumerated(EnumType.STRING)
     private LoginStatus loginStatus;
     @ManyToOne
