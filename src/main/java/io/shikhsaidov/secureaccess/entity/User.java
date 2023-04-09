@@ -60,7 +60,7 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user")
     @ToString.Exclude
     @LazyCollection(LazyCollectionOption.FALSE)
-    private List<UserRecognizedDevice> userRecognizedDevices;
+    private List<Device> devices;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

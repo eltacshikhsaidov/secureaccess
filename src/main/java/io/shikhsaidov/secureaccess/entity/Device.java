@@ -1,11 +1,10 @@
 package io.shikhsaidov.secureaccess.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import io.shikhsaidov.secureaccess.enums.DeviceStatus;
 import io.shikhsaidov.secureaccess.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
-
-// one user can recognize multiple devices
 
 @Getter
 @Setter
@@ -14,12 +13,15 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @Entity
-public class UserRecognizedDevice {
+public class Device {
     @Id
     @GeneratedValue
     private Long id;
     private String deviceName;
     private String ipAddress;
+    private String token;
+    @Enumerated(EnumType.STRING)
+    private DeviceStatus deviceStatus;
     @Enumerated(EnumType.STRING)
     private Status status = Status.ACTIVE;
     @ManyToOne

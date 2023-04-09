@@ -29,4 +29,5 @@ public class ResponseCodes {
     public static final Integer DEVICE_VERIFICATION_TOKEN_IS_NULL = 26;
     public static final Integer DEVICE_VERIFICATION_TOKEN_IS_NOT_VALID = 27;
     public static final Integer DEVICE_VERIFICATION_TOKEN_IS_ALREADY_CONFIRMED = 28;
+    public static final Integer CONFIRM_PREVIOUS_SENT_EMAIL = 29;
 }

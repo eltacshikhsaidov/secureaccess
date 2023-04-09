@@ -54,8 +54,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final IpDataUtil ipDataUtil;
     private final LoginLocationRepository loginLocationRepository;
     private final HeaderHolder headerHolder;
-    private final UserRecognizedDevicesRepository userRecognizedDevicesRepository;
-    private final UserBlockedDeviceRepository userBlockedDeviceRepository;
+    private final DeviceRepository deviceRepository;
 
     @Value("${url}")
     public String url;
@@ -272,17 +271,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         logDetail.getIp()
                 );
 
-                var userRecognizedDevice = UserRecognizedDevice.builder()
+                var device = Device.builder()
                         .deviceName(deviceName)
                         .ipAddress(logDetail.getIp())
+                        .deviceStatus(DeviceStatus.RECOGNIZED)
                         .user(checkUserInDB.get())
                         .build();
-                userRecognizedDevicesRepository.save(userRecognizedDevice);
+                deviceRepository.save(device);
             } else {
+
                 // check if next device is used as recognized or not
-                var userRecognisedDevices = userRecognizedDevicesRepository.findAllByUser(checkUserInDB.get());
+                var userRecognisedDevices = deviceRepository.findAllByUserAndDeviceStatus(
+                        checkUserInDB.get(),
+                        DeviceStatus.RECOGNIZED
+                );
+
                 boolean isDeviceRecognised = userRecognisedDevices.stream().anyMatch(
                         recognizedDevice -> recognizedDevice.getDeviceName().equalsIgnoreCase(deviceName)
+                                && recognizedDevice.getIpAddress().equalsIgnoreCase(logDetail.getIp())
                 );
 
                 if (!isDeviceRecognised) {
@@ -292,56 +298,151 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                             logDetail.getIp()
                     );
 
-                    String token = generateToken();
+                    var unrecognizedDevice = deviceRepository.findDeviceByIpAddressAndDeviceName(
+                            logDetail.getIp(),
+                            deviceName
+                    ).orElse(null);
 
-                    // automatically add device as blocked while user accepts it
-                    var userBlockedDevice = UserBlockedDevice.builder()
-                            .deviceName(deviceName)
-                            .user(checkUserInDB.get())
-                            .token(token)
-                            .ipAddress(logDetail.getIp())
-                            .build();
-                    userBlockedDeviceRepository.save(userBlockedDevice);
+                    if (isNull(unrecognizedDevice)) {
+                        String token = generateToken();
 
-                    ConfirmationToken confirmationToken = ConfirmationToken.builder()
-                            .token(token)
-                            .expiresAt(LocalDateTime.now().plusMinutes(5))
-                            .user(checkUserInDB.get())
-                            .confirmationTokenType(ConfirmationTokenType.NEW_DEVICE_CONFIRMATION)
-                            .build();
+                        // automatically add device as blocked while user accepts it
+                        var device = Device.builder()
+                                .deviceName(deviceName)
+                                .deviceStatus(DeviceStatus.UNRECOGNIZED)
+                                .ipAddress(logDetail.getIp())
+                                .user(checkUserInDB.get())
+                                .token(token)
+                                .build();
+                        deviceRepository.save(device);
 
-                    confirmationTokenRepository.save(confirmationToken);
+                        ConfirmationToken confirmationToken = ConfirmationToken.builder()
+                                .token(token)
+                                .expiresAt(LocalDateTime.now().plusMinutes(1))
+                                .user(checkUserInDB.get())
+                                .confirmationTokenType(ConfirmationTokenType.NEW_DEVICE_CONFIRMATION)
+                                .build();
 
-                    var emailInfo = EmailInfo.builder()
-                            .emailTo(email)
-                            .subject("Unrecognized device")
-                            .content(
-                                    emailUtil.informNewDeviceTemplate(
-                                            checkUserInDB.get().getFirstname(),
-                                            loginLocation.getLatitude(),
-                                            loginLocation.getLongitude(),
-                                            url + "v1/auth/verify-device?token=".concat(token)
-                                    ).getBytes()
-                            )
-                            .type(EmailType.INFO)
-                            .user(checkUserInDB.get())
-                            .build();
+                        confirmationTokenRepository.save(confirmationToken);
 
-                    // send mail
-                    try {
-                        log.info("Sending email to user");
-                        emailService.sendEmail(emailInfo);
-                        emailInfo.setStatus(EmailStatus.SENT);
-                    } catch (Exception e) {
-                        log.warn("Sending email failed," +
-                                " exception message: {}", e.getMessage());
-                        emailInfo.setStatus(EmailStatus.RETRY);
+                        var emailInfo = EmailInfo.builder()
+                                .emailTo(email)
+                                .subject("Unrecognized device")
+                                .content(
+                                        emailUtil.informNewDeviceTemplate(
+                                                checkUserInDB.get().getFirstname(),
+                                                loginLocation.getLatitude(),
+                                                loginLocation.getLongitude(),
+                                                url + "v1/auth/verify-device?token=".concat(token)
+                                        ).getBytes()
+                                )
+                                .type(EmailType.INFO)
+                                .user(checkUserInDB.get())
+                                .build();
+
+                        // send mail
+                        try {
+                            log.info("Sending email to user");
+                            emailService.sendEmail(emailInfo);
+                            emailInfo.setStatus(EmailStatus.SENT);
+                        } catch (Exception e) {
+                            log.warn("Sending email failed," +
+                                    " exception message: {}", e.getMessage());
+                            emailInfo.setStatus(EmailStatus.RETRY);
+                        }
+
+                        emailInfoRepository.save(emailInfo);
+
+
+                        return response(VERIFY_NEW_DEVICE);
+
+                    } else {
+                        // check if confirmation token is expired or not
+                        ConfirmationToken confirmationToken = confirmationTokenRepository.findByToken(
+                                unrecognizedDevice != null ? unrecognizedDevice.getToken() : null
+                        ).orElseThrow(
+                                () -> new TokenNotFound("token not found")
+                        );
+
+                        if (nonNull(confirmationToken.getConfirmedAt())) {
+                            log.warn(
+                                    "requestPath: '{}', clientIp: '{}', function response: " +
+                                            "device verification token is already confirmed",
+                                    logDetail.getRequestPath(),
+                                    logDetail.getIp()
+                            );
+                            return response(DEVICE_VERIFICATION_TOKEN_IS_ALREADY_CONFIRMED);
+                        }
+
+                        LocalDateTime expiresAt = confirmationToken.getExpiresAt();
+                        if (expiresAt.isBefore(LocalDateTime.now())) {
+                            // if token expired then generate new token to send to the user
+                            log.warn(
+                                    "requestPath: '{}', clientIp: '{}', function response: " +
+                                            "confirmation token expired, sending new token",
+                                    logDetail.getRequestPath(),
+                                    logDetail.getIp()
+                            );
+
+                            String token = generateToken();
+
+                            // update device token by id
+                            deviceRepository.updateDeviceTokenById(
+                                    Objects.requireNonNull(unrecognizedDevice).getId(), token
+                            );
+
+                            confirmationToken = ConfirmationToken.builder()
+                                    .token(token)
+                                    .expiresAt(LocalDateTime.now().plusMinutes(1))
+                                    .user(checkUserInDB.get())
+                                    .confirmationTokenType(ConfirmationTokenType.NEW_DEVICE_CONFIRMATION)
+                                    .build();
+
+                            confirmationTokenRepository.save(confirmationToken);
+
+                            var emailInfo = EmailInfo.builder()
+                                    .emailTo(email)
+                                    .subject("Unrecognized device")
+                                    .content(
+                                            emailUtil.informNewDeviceTemplate(
+                                                    checkUserInDB.get().getFirstname(),
+                                                    loginLocation.getLatitude(),
+                                                    loginLocation.getLongitude(),
+                                                    url + "v1/auth/verify-device?token=".concat(token)
+                                            ).getBytes()
+                                    )
+                                    .type(EmailType.INFO)
+                                    .user(checkUserInDB.get())
+                                    .build();
+
+                            // send mail
+                            try {
+                                log.info("Sending email to user");
+                                emailService.sendEmail(emailInfo);
+                                emailInfo.setStatus(EmailStatus.SENT);
+                            } catch (Exception e) {
+                                log.warn("Sending email failed," +
+                                        " exception message: {}", e.getMessage());
+                                Objects.requireNonNull(emailInfo).setStatus(EmailStatus.RETRY);
+                            }
+
+                            emailInfoRepository.save(emailInfo);
+
+
+                            return response(VERIFY_NEW_DEVICE);
+                        } else {
+                            log.warn(
+                                    "requestPath: '{}', clientIp: '{}', function response: " +
+                                            "Please confirm previous sent email before processing",
+                                    logDetail.getRequestPath(),
+                                    logDetail.getIp()
+                            );
+                            return response(CONFIRM_PREVIOUS_SENT_EMAIL);
+                        }
+
+
                     }
 
-                    emailInfoRepository.save(emailInfo);
-
-
-                    return response(VERIFY_NEW_DEVICE);
                 }
             }
 
@@ -511,9 +612,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .subject("Reset password")
                 .content(
                         emailUtil.resetPasswordTemplate(
-                        user.get().getFirstname(),
-                        token
-                    ).getBytes()
+                                user.get().getFirstname(),
+                                token
+                        ).getBytes()
                 )
                 .build();
 
@@ -697,15 +798,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(CONFIRMATION_TOKEN_EXPIRED);
         }
 
-        var userBlockedDevice = userBlockedDeviceRepository.findByToken(token);
-        var userRecognizedDevice = UserRecognizedDevice.builder()
-                .deviceName(userBlockedDevice.getDeviceName())
-                .ipAddress(logDetail.getIp())
-                .user(userBlockedDevice.user)
-                .build();
-        userRecognizedDevicesRepository.save(userRecognizedDevice);
+        var unRecognizedDevice = deviceRepository.findDeviceByToken(token).orElse(null);
+        deviceRepository.updateDeviceStatusById(
+                unRecognizedDevice != null ? unRecognizedDevice.getId() : null,
+                DeviceStatus.RECOGNIZED
+        );
         confirmationTokenRepository.updateConfirmedAt(token, LocalDateTime.now());
-        userBlockedDeviceRepository.updateUserBlockedDeviceByToken(token, Status.INACTIVE);
 
 
         log.info(
