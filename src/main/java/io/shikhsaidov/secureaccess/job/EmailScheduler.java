@@ -4,7 +4,6 @@ import io.shikhsaidov.secureaccess.entity.EmailInfo;
 import io.shikhsaidov.secureaccess.enums.EmailStatus;
 import io.shikhsaidov.secureaccess.repository.EmailInfoRepository;
 import io.shikhsaidov.secureaccess.service.EmailService;
-import io.shikhsaidov.secureaccess.util.LogDetail;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -24,16 +23,11 @@ public class EmailScheduler {
 
     private final EmailInfoRepository emailInfoRepository;
     private final EmailService emailService;
-    private final LogDetail logDetail;
 
     @Scheduled(cron = "0 */2 * ? * *")
     @Transactional
     public void retryEmailSending() {
-        log.info(
-                "requestPath: '{}', serverIp: '{}', [retryEmailSending] schedule function started",
-                logDetail.getRequestPath(),
-                logDetail.getIp()
-        );
+        log.info("method: '[retryEmailSending]', schedule function started");
         List<EmailInfo> emailInfoList = emailInfoRepository.getEmailInfoByStatus(EmailStatus.RETRY);
 
         String functionMessage = emailInfoList.size() == 0
@@ -42,20 +36,10 @@ public class EmailScheduler {
                 "email" :
                 "emails")
                 + " will be retried to send to users";
-        log.info(
-                "requestPath: '{}', serverIp: '{}', [retryEmailSending] " +
-                        "fetching failed emails response : {}",
-                logDetail.getRequestPath(),
-                logDetail.getIp(),
-                functionMessage
-        );
+        log.info("method: '[retryEmailSending]', fetching failed emails response : {}", functionMessage);
 
         if (emailInfoList.size() == 0) {
-            log.info(
-                    "requestPath: '{}', serverIp: '{}', [retryEmailSending] schedule function ended",
-                    logDetail.getRequestPath(),
-                    logDetail.getIp()
-            );
+            log.info("method: '[retryEmailSending]', schedule function ended");
             return;
         }
 
@@ -64,12 +48,8 @@ public class EmailScheduler {
 
                     try {
 
-                        log.info(
-                                "requestPath: '{}', serverIp: '{}', " +
-                                        "[retryEmailSending] schedule function response: {}",
-                                logDetail.getRequestPath(),
-                                logDetail.getIp(),
-                                emailInfo.emailTo
+                        log.info("method: '[retryEmailSending]', schedule function response: {}",
+                                "Sending email to " + emailInfo.emailTo
                         );
                         emailService.sendEmail(emailInfo);
 
@@ -79,11 +59,8 @@ public class EmailScheduler {
 
                     } catch (Exception e) {
                         log.warn(
-                                "requestPath: '{}', serverIp: '{}', " +
-                                        "[retryEmailSending] schedule function response: {}, " +
+                                "method: '[retryEmailSending]', schedule function response: {}, " +
                                         "exception message: {}",
-                                logDetail.getRequestPath(),
-                                logDetail.getIp(),
                                 "Exception occurred while sending email to: " + emailInfo.emailTo,
                                 e.getMessage()
                         );
@@ -107,10 +84,6 @@ public class EmailScheduler {
                 }
         );
 
-        log.info(
-                "requestPath: '{}', serverIp: '{}', [retryEmailSending] schedule function ended",
-                logDetail.getRequestPath(),
-                logDetail.getIp()
-        );
+        log.info("method: '[retryEmailSending]' schedule function ended");
     }
 }
