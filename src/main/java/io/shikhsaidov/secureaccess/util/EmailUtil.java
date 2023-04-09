@@ -14,7 +14,7 @@ import java.nio.charset.Charset;
 
 @Component
 @PropertySources({
-        @PropertySource("classpath:email.properties"),
+        @PropertySource("classpath:email-${application.environment}.properties"),
         @PropertySource("classpath:config-${application.environment}.properties")
 })
 public class EmailUtil {

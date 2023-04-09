@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Log4j2
 @Service
 @RequiredArgsConstructor
-@PropertySource("classpath:email.properties")
+@PropertySource("classpath:email-${application.environment}.properties")
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;

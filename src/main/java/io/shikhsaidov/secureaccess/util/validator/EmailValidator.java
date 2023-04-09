@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 
 @Component
-@PropertySource("classpath:email.properties")
+@PropertySource("classpath:email-${application.environment}.properties")
 public class EmailValidator {
 
     @Value("${regex.regexp}")

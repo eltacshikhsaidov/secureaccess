@@ -28,33 +28,22 @@ spring:
   #  level:
   #    org.springframework: info
   #    org.hibernate: debug
+
   mail:
     protocol: smtp
-    host: sandbox.smtp.mailtrap.io
-    username: 163b4a68900963
-    password: 34390a2dce58ca
+    host: us2.smtp.mailhostbox.com
+    username: noreply@shortly.tech
+    password: P*%k)vR2
     port: 587
     properties:
       mail:
         smtp:
-          auth: true
-          starttls:
-            enable: true
+        auth: true
+        starttls:
+          enable: true
 
-  #            mail:
-  #              protocol: smtp
-  #              host: us2.smtp.mailhostbox.com
-  #              username: noreply@shortly.tech
-  #              password: P*%k)vR2
-  #              port: 587
-  #              properties:
-  #                mail:
-  #                  smtp:
-  #                    auth: true
-  #                    starttls:
-  #                      enable: true
   config:
-    name: application,config
+    name: application
       
 
 # Server configuration prod
