@@ -33,8 +33,8 @@ public class EmailScheduler {
         String functionMessage = emailInfoList.size() == 0
                 ? "There is not any failed email"
                 : (emailInfoList.size() == 1 ?
-                "email" :
-                "emails")
+                emailInfoList.size() + "email" :
+                emailInfoList.size() + "emails")
                 + " will be retried to send to users";
         log.info("method: '[retryEmailSending]', fetching failed emails response : {}", functionMessage);
 
