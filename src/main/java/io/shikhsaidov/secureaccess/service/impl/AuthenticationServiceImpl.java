@@ -286,6 +286,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         DeviceStatus.RECOGNIZED
                 );
 
+                log.error("Allowed device list: {}", userRecognisedDevices);
+
                 boolean isDeviceRecognised = userRecognisedDevices.stream().anyMatch(
                         recognizedDevice -> recognizedDevice.getDeviceName().equalsIgnoreCase(deviceName)
                                 && recognizedDevice.getIpAddress().equalsIgnoreCase(logDetail.getIp())
