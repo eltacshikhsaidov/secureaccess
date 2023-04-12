@@ -377,16 +377,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
                         // send mail
                         try {
-                            log.info("Sending email to user");
+                            log.info("requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                                            "sending email to user",
+                                    logDetail.getRequestPath(),
+                                    logDetail.getIp()
+                            );
                             emailService.sendEmail(emailInfo);
                             emailInfo.setStatus(EmailStatus.SENT);
                         } catch (Exception e) {
-                            log.warn("Sending email failed," +
-                                    " exception message: {}", e.getMessage());
+                            log.warn("requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                                            " email failed, but user registered successfully, exception message: {}",
+                                    logDetail.getRequestPath(),
+                                    logDetail.getIp(),
+                                    e.getMessage()
+                            );
                             emailInfo.setStatus(EmailStatus.RETRY);
+                        } finally {
+                            emailInfoRepository.save(emailInfo);
                         }
-
-                        emailInfoRepository.save(emailInfo);
 
 
                         return response(VERIFY_NEW_DEVICE);
@@ -452,16 +460,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
                             // send mail
                             try {
-                                log.info("Sending email to user");
+                                log.info("requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                                                "sending email to user",
+                                        logDetail.getRequestPath(),
+                                        logDetail.getIp()
+                                );
                                 emailService.sendEmail(emailInfo);
                                 emailInfo.setStatus(EmailStatus.SENT);
                             } catch (Exception e) {
-                                log.warn("Sending email failed," +
-                                        " exception message: {}", e.getMessage());
+                                log.warn("requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                                                " email failed, but user registered successfully, exception message: {}",
+                                        logDetail.getRequestPath(),
+                                        logDetail.getIp(),
+                                        e.getMessage()
+                                );
                                 Objects.requireNonNull(emailInfo).setStatus(EmailStatus.RETRY);
+                            } finally {
+                                emailInfoRepository.save(Objects.requireNonNull(emailInfo));
                             }
-
-                            emailInfoRepository.save(emailInfo);
 
 
                             return response(VERIFY_NEW_DEVICE);
@@ -560,9 +576,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getRequestPath(),
                 logDetail.getIp()
         );
+
         return success(
-                RegisterResponse.builder()
-                        .message("token confirmed successfully")
+                MessageResponse.builder()
+                        .message(translate(TOKEN_CONFIRMATION_SUCCESS_MESSAGE.toString()))
+                        .additions(
+                                Additions.builder().loginUrl("https://shortly.tech/login").build()
+                        )
                         .build()
         );
     }
@@ -805,7 +825,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getRequestPath(),
                 logDetail.getIp()
         );
-        return success(null);
+
+        return success(
+                MessageResponse.builder()
+                        .message(translate(PASSWORD_RESET_SUCCESS_MESSAGE.toString()))
+                        .additions(
+                                Additions.builder().loginUrl("https://shortly.tech/login").build()
+                        )
+                        .build()
+        );
     }
 
     @Override
@@ -877,13 +905,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getIp()
         );
 
-        HashMap<String, String> data = new HashMap<>();
-        data.put("loginUrl", "https://shortly.tech/login");
-
         return success(
                 MessageResponse.builder()
                         .message(translate(DEVICE_VERIFIED_SUCCESS_MESSAGE.toString()))
-                        .data(data)
+                        .additions(
+                                Additions.builder().loginUrl("https://shortly.tech/login").build()
+                        )
                         .build()
         );
     }

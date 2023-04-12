@@ -36,4 +36,6 @@ public class ResponseCodes {
     public static final Integer EMAIL_CONFIRMATION_MESSAGE = 33;
     public static final Integer PASSWORD_RESET_INSTRUCTIONS_MESSAGE = 34;
     public static final Integer DEVICE_VERIFIED_SUCCESS_MESSAGE = 35;
+    public static final Integer PASSWORD_RESET_SUCCESS_MESSAGE = 36;
+    public static final Integer TOKEN_CONFIRMATION_SUCCESS_MESSAGE = 37;
 }

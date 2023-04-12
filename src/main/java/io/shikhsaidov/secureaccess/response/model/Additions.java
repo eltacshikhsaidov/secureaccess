@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class MessageResponse {
-    private String message;
-    private Additions additions;
+public class Additions {
+    private String loginUrl;
 }
