@@ -11,6 +11,7 @@ import io.shikhsaidov.secureaccess.response.Response;
 import io.shikhsaidov.secureaccess.service.*;
 import io.shikhsaidov.secureaccess.util.*;
 import io.shikhsaidov.secureaccess.util.validator.EmailValidator;
+import io.shikhsaidov.secureaccess.util.validator.PasswordValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,8 +29,8 @@ import java.util.UUID;
 
 import static io.shikhsaidov.secureaccess.response.Response.*;
 import static io.shikhsaidov.secureaccess.response.ResponseCodes.*;
-import static io.shikhsaidov.secureaccess.util.Utility.isNull;
-import static io.shikhsaidov.secureaccess.util.Utility.randomBetween;
+import static io.shikhsaidov.secureaccess.util.Translator.translate;
+import static io.shikhsaidov.secureaccess.util.Utility.*;
 import static java.util.Objects.nonNull;
 
 @Log4j2
@@ -55,6 +56,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final LoginLocationRepository loginLocationRepository;
     private final HeaderHolder headerHolder;
     private final DeviceRepository deviceRepository;
+    private final PasswordValidator passwordValidator;
 
     @Value("${url}")
     public String url;
@@ -64,12 +66,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public Response<?> register(RegisterDTO request) {
-
-
         log.info(
-                "requestPath: '{}', clientIp: '{}', function calling with request",
+                "requestPath: '{}', clientIp: '{}', function calling with request: email='{}'",
                 logDetail.getRequestPath(),
-                logDetail.getIp()
+                logDetail.getIp(),
+                request.email()
         );
         String email = request.email();
         String password = request.password();
@@ -85,6 +86,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(INVALID_REQUEST_DATA);
         }
 
+        if (isLatin(firstName) || isLatin(lastName)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "first name and last name should be only latin characters",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(ONLY_LATIN_LETTERS_ALLOWED_IN_FIRSTNAME_AND_LASTNAME);
+        }
+
+        if (firstName.length() > 10 || lastName.length() > 30 || email.length() > 50 || password.length() > 30) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "maximum character limit exceeded",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(MAXIMUM_CHARACTER_LENGTH_LIMIT_EXCEEDED);
+        }
+
         if (emailValidator.validate(email)) {
             log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: email format is incorrect",
@@ -92,6 +113,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     logDetail.getIp()
             );
             return response(EMAIL_FORMAT_IS_INCORRECT);
+        }
+
+        if (passwordValidator.validate(password)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "password does not meet required criteria",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(PASSWORD_DOES_NOT_MATCH_REQUIRED_CRITERIA);
         }
 
         // check if user is exists
@@ -142,16 +173,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         // send mail
         try {
-            log.info("Sending email to user");
+            log.info("requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                            "sending email to user",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             emailService.sendEmail(emailInfo);
             emailInfo.setStatus(EmailStatus.SENT);
         } catch (Exception e) {
-            log.warn("Sending email failed, but user registered successfully," +
-                    " exception message: {}", e.getMessage());
+            log.warn("requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                            " email failed, but user registered successfully, exception message: {}",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp(),
+                    e.getMessage()
+            );
             emailInfo.setStatus(EmailStatus.RETRY);
+        } finally {
+            emailInfoRepository.save(emailInfo);
         }
-
-        emailInfoRepository.save(emailInfo);
 
         log.info(
                 "requestPath: '{}', clientIp: '{}', function response: success",
@@ -160,7 +199,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         );
         return Response.success(
                 RegisterResponse.builder()
-                        .message("confirmation link sent to your email address")
+                        .message(translate(EMAIL_CONFIRMATION_MESSAGE.toString()))
                         .build()
         );
     }

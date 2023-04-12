@@ -71,4 +71,8 @@ public class Utility {
         return rand.nextInt((max - min) + 1) + min;
     }
 
+    public static boolean isLatin(String word) {
+        return !word.matches("^[a-zA-Z]+$");
+    }
+
 }

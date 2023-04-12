@@ -30,4 +30,8 @@ public class ResponseCodes {
     public static final Integer DEVICE_VERIFICATION_TOKEN_IS_NOT_VALID = 27;
     public static final Integer DEVICE_VERIFICATION_TOKEN_IS_ALREADY_CONFIRMED = 28;
     public static final Integer CONFIRM_PREVIOUS_SENT_EMAIL = 29;
+    public static final Integer ONLY_LATIN_LETTERS_ALLOWED_IN_FIRSTNAME_AND_LASTNAME = 30;
+    public static final Integer MAXIMUM_CHARACTER_LENGTH_LIMIT_EXCEEDED = 31;
+    public static final Integer PASSWORD_DOES_NOT_MATCH_REQUIRED_CRITERIA = 32;
+    public static final Integer EMAIL_CONFIRMATION_MESSAGE = 33;
 }
