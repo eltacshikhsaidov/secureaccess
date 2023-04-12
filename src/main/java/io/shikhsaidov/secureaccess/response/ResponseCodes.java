@@ -34,4 +34,6 @@ public class ResponseCodes {
     public static final Integer MAXIMUM_CHARACTER_LENGTH_LIMIT_EXCEEDED = 31;
     public static final Integer PASSWORD_DOES_NOT_MATCH_REQUIRED_CRITERIA = 32;
     public static final Integer EMAIL_CONFIRMATION_MESSAGE = 33;
+    public static final Integer PASSWORD_RESET_INSTRUCTIONS_MESSAGE = 34;
+    public static final Integer DEVICE_VERIFIED_SUCCESS_MESSAGE = 35;
 }

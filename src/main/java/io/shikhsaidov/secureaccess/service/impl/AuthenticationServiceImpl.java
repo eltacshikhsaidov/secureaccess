@@ -22,10 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static io.shikhsaidov.secureaccess.response.Response.*;
 import static io.shikhsaidov.secureaccess.response.ResponseCodes.*;
@@ -206,7 +203,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public Response<?> login(LoginDTO request) {
-
         log.info(
                 "requestPath: '{}', clientIp: '{}', function calling with request",
                 logDetail.getRequestPath(),
@@ -216,7 +212,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String email = request.email();
         String password = request.password();
 
-        if (isNull(email, password)) {
+        if (anyBlank(email, password)) {
             log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: invalid request data",
                     logDetail.getRequestPath(),
@@ -324,8 +320,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         checkUserInDB.get(),
                         DeviceStatus.RECOGNIZED
                 );
-
-                log.error("Allowed device list: {}", userRecognisedDevices);
 
                 boolean isDeviceRecognised = userRecognisedDevices.stream().anyMatch(
                         recognizedDevice -> recognizedDevice.getDeviceName().equalsIgnoreCase(deviceName)
@@ -504,7 +498,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var user = userRepository.findByEmail(request.email())
                 .orElseThrow();
         var jwtToken = jwtService.generateToken(user);
-        revokeAllUserTokens(user);
+        revokeAllUserTokens(user); // one user can log in at a time (no two users can log in at the same time)
         saveUserToken(user, jwtToken);
 
         log.info(
@@ -523,6 +517,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getIp(),
                 token
         );
+
+        if (anyBlank(token)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: invalid request data",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(INVALID_REQUEST_DATA);
+        }
 
         ConfirmationToken confirmationToken = confirmationTokenRepository
                 .findByToken(token)
@@ -575,7 +578,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         );
         String email = forgotPasswordDTO.email();
 
-        if (isNull(email)) {
+        if (anyBlank(email)) {
             log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: invalid request data",
                     logDetail.getRequestPath(),
@@ -678,7 +681,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         );
         return success(
                 ForgotPasswordResponse.builder()
-                        .message("Reset instructions sent to your email address")
+                        .message(translate(PASSWORD_RESET_INSTRUCTIONS_MESSAGE.toString()))
                         .build()
         );
     }
@@ -695,7 +698,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String confirmPassword = resetPasswordDTO.confirmNewPassword();
         String token = resetPasswordDTO.token();
 
-        if (isNull(password, confirmPassword, token)) {
+        if (anyBlank(password, confirmPassword, token)) {
             log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: invalid request data",
                     logDetail.getRequestPath(),
@@ -764,14 +767,35 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return response(PASSWORDS_DID_NOT_MATCH);
         }
 
+        if (passwordValidator.validate(password) || passwordValidator.validate(confirmPassword)) {
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "password does not meet required criteria",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
+            return response(PASSWORD_DOES_NOT_MATCH_REQUIRED_CRITERIA);
+        }
+
         try {
-            log.info("Updating user data");
+            log.info(
+                    "requestPath: '{}', clientIp: '{}', (continued) function response: " +
+                            "updating user data",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp()
+            );
             userRepository.updatePasswordByUserId(
                     Objects.requireNonNull(user).getId(), passwordEncoder.encode(password)
             );
             resetPasswordTokenRepository.updateAllByStatusAndUser(Status.INACTIVE, user);
         } catch (Exception e) {
-            log.warn("Exception occurred while updating user, message: {}", e.getMessage());
+            log.warn(
+                    "requestPath: '{}', clientIp: '{}', function response: " +
+                            "exception occurred, exception message: {}",
+                    logDetail.getRequestPath(),
+                    logDetail.getIp(),
+                    e.getMessage()
+            );
             return failed(EXCEPTION_OCCURRED);
         }
 
@@ -793,13 +817,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 token
         );
 
-        if (isNull(token)) {
+        if (anyBlank(token)) {
             log.warn(
-                    "requestPath: '{}', clientIp: '{}', function response: verification token is null",
+                    "requestPath: '{}', clientIp: '{}', function response: invalid request data",
                     logDetail.getRequestPath(),
                     logDetail.getIp()
             );
-            return response(DEVICE_VERIFICATION_TOKEN_IS_NULL);
+            return response(INVALID_REQUEST_DATA);
         }
 
         // regex is same with reset password token
@@ -852,7 +876,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 logDetail.getRequestPath(),
                 logDetail.getIp()
         );
-        return success(null);
+
+        HashMap<String, String> data = new HashMap<>();
+        data.put("loginUrl", "https://shortly.tech/login");
+
+        return success(
+                MessageResponse.builder()
+                        .message(translate(DEVICE_VERIFIED_SUCCESS_MESSAGE.toString()))
+                        .data(data)
+                        .build()
+        );
     }
 
     private void saveUserToken(User user, String jwtToken) {
