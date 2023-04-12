@@ -77,7 +77,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String firstName = request.firstName();
         String lastName = request.lastName();
 
-        if (isNull(email, password, firstName, lastName)) {
+        if (anyBlank(email, password, firstName, lastName)) {
             log.warn(
                     "requestPath: '{}', clientIp: '{}', function response: invalid request data",
                     logDetail.getRequestPath(),

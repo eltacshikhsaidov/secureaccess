@@ -22,6 +22,15 @@ public class Utility {
         return false;
     }
 
+    public static boolean anyBlank(String... strings) {
+        for (String str : strings) {
+            if (str == null || str.trim().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static String object2Json(Object o) {
         String jsonString = null;
 
