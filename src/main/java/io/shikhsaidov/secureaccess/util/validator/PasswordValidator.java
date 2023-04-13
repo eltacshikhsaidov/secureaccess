@@ -15,7 +15,7 @@ public class PasswordValidator {
     public String PASSWORD_VALIDATOR_REGEX;
 
     public boolean validate(String password) {
-        Pattern pattern = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[#$@!%&*?])[A-Za-z\\d#$@!%&*?]{8,30}$");
+        Pattern pattern = Pattern.compile(PASSWORD_VALIDATOR_REGEX);
         Matcher matcher = pattern.matcher(password);
         return !matcher.matches();
     }

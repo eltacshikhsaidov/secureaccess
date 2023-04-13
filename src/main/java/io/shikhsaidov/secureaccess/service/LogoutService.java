@@ -36,6 +36,13 @@ public class LogoutService implements LogoutHandler {
             Authentication authentication
     ) {
         final String authHeader = request.getHeader("Authorization");
+        log.info(
+                "requestPath: '{}', clientIp: '{}', " +
+                        "function calling with request parameters: token='{}'",
+                logDetail.getRequestPath(),
+                logDetail.getIp(),
+                authHeader
+        );
         final String jwt;
         if (isNull(authHeader) || !authHeader.startsWith("Bearer ")) {
             log.warn(
