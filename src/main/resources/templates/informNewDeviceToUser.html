@@ -44,7 +44,7 @@
             background-color: #029cd2;
         }
 
-        #map {
+        img {
             margin-top: 10px;
             border-radius: 5px;
         }
@@ -64,16 +64,7 @@
         location by clicking the button below.</p>
     <a href="link_replace" target="_blank" style="border-radius: 5px; box-sizing: border-box; cursor: pointer; display: inline-block; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-decoration: none; text-transform: capitalize; background-color: #00aeeb; border: 1px solid #00aeeb;color: #ffffff;">Verify device</a>
     <div id="map">
-        <iframe
-                width="100%"
-                height="400vh"
-                style="border:0"
-                loading="lazy"
-                allowfullscreen
-                sandbox="allow-same-origin allow-scripts"
-                referrerpolicy="no-referrer-when-downgrade"
-                src="https://www.google.com/maps/embed/v1/place?key=api_key_replace&q=latitude_replace,longitude_replace">
-        </iframe>
+        <img src="https://maps.googleapis.com/maps/api/staticmap?center=latitude_replace,longitude_replace&zoom=15&size=600x500&maptype=roadmap&markers=color:yellow%7Clabel:D%7Clatitude_replace,longitude_replace&key=api_key_replace"  alt="Unrecognized device location"/>
     </div>
 </div>
 
