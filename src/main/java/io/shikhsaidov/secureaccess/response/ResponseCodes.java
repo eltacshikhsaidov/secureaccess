@@ -38,4 +38,5 @@ public class ResponseCodes {
     public static final Integer DEVICE_VERIFIED_SUCCESS_MESSAGE = 35;
     public static final Integer PASSWORD_RESET_SUCCESS_MESSAGE = 36;
     public static final Integer TOKEN_CONFIRMATION_SUCCESS_MESSAGE = 37;
+    public static final Integer ACCESS_DENIED = 38;
 }

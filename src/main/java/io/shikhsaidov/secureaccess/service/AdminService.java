@@ -10,4 +10,6 @@ public interface AdminService {
     Response<?> getUsers(Status status, boolean locked, boolean enabled);
 
     Response<?> getEmails(EmailStatus emailStatus);
+
+    Response<?> changeUserLockStatus(Integer id);
 }

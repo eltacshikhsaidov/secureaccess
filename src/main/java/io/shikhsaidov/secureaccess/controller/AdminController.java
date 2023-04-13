@@ -6,10 +6,7 @@ import io.shikhsaidov.secureaccess.response.Response;
 import io.shikhsaidov.secureaccess.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(path = "/v1/admin")
@@ -34,6 +31,11 @@ public class AdminController {
     @GetMapping(path = "/emails", produces = "application/json")
     public Response<?> getEmails(@RequestParam(name = "status", defaultValue = "SENT") EmailStatus emailStatus) {
         return adminService.getEmails(emailStatus);
+    }
+
+    @PutMapping(path = "/change-user-lock-status")
+    public Response<?> changeUserLockStatus(@RequestParam(name = "id") Integer userId) {
+        return adminService.changeUserLockStatus(userId);
     }
 
 }

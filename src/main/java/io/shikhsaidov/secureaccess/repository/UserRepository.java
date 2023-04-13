@@ -28,4 +28,9 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     List<User> findUsersByStatusAndLockedAndEnabled(Status status, boolean locked, boolean enabled);
 
+    @Transactional
+    @Modifying
+    @Query("update User u set u.locked=?2 where u.id=?1")
+    void changeLockStatus(Integer userId, boolean lockStatus);
+
 }
